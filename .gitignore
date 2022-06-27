@@ -1,0 +1,39 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+
+downloads/
+data*
+res/*
+
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# IPython
+#profile_default/
+#ipython_config.py
+
+# Spyder project settings
+.spyderproject
+.spyproject
+
+
+tst_*
+test_*
+*temp*
+log_*
+
+*.bat
+*.sh
+
+
+catboost_info
+
+
+test*
+train*
+
+
+*.zip
+answ*
+
