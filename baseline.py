@@ -3,7 +3,7 @@
 
 # ## Загрузим нужные библиотеки
 
-# In[3]:
+# In[1]:
 
 
 import os
@@ -17,7 +17,7 @@ from sklearn.datasets import make_regression
 
 # ### Reproducibility block
 
-# In[4]:
+# In[2]:
 
 
 # seed the RNG for all devices (both CPU and CUDA)
@@ -32,14 +32,14 @@ import random
 random.seed(5986721)
 
 # 
-np.random.seed(62185)
+np.random.seed(62225)
 
 #sklearn take seed from a line abowe
 
 
 # Выполним загрузу датсета
 
-# In[8]:
+# In[3]:
 
 
 DIR_DATA  = os.path.join(os.getcwd(), 'data')
@@ -54,24 +54,16 @@ DIR_SUBM  = os.path.join(os.getcwd(), 'subm')
 
 
 
-# In[11]:
+# In[4]:
 
 
 df_train = pd.read_csv(os.path.join(DIR_DATA, 'train.csv'), index_col= 0)
 df_test = pd.read_csv(os.path.join(DIR_DATA, 'test.csv'), index_col= 0)
 
 
-# ## Проанализируем датасет
-
-# In[12]:
-
-
-df_train.info()
-
-
 # Заменим категорию и автора на число
 
-# In[13]:
+# In[5]:
 
 
 df_train["category"] = df_train["category"].astype('category')
@@ -79,7 +71,7 @@ df_train["category"] = df_train["category"].cat.codes
 df_train["category"] = df_train["category"].astype('int')
 
 
-# In[14]:
+# In[6]:
 
 
 df_train["authors"] = df_train["authors"].astype('category')
@@ -87,30 +79,16 @@ df_train["authors"] = df_train["authors"].cat.codes
 df_train["authors"] = df_train["authors"].astype('int')
 
 
-# In[15]:
+# In[7]:
 
 
 df_train['day'] = pd.to_datetime(df_train['publish_date']).dt.strftime("%d").astype(int)
 df_train['mounth'] = pd.to_datetime(df_train['publish_date']).dt.strftime("%m").astype(int)
 
 
-# In[17]:
-
-
-df_train.head(3)
-
-
-# In[18]:
-
-
-features = list(set(df_train.columns) - set(['publish_date']))
-
-_ = df_train[features].hist(figsize=(20,12))
-
-
 # Всего 9 категорий статей
 
-# In[19]:
+# In[8]:
 
 
 df_train.category.value_counts()
@@ -118,36 +96,38 @@ df_train.category.value_counts()
 
 # ## Выделим выборки
 
-# In[20]:
+# In[9]:
 
 
 X = df_train.drop(["views","depth","full_reads_percent","title","publish_date", "session", "tags"], axis = 1)
 y = df_train[["views","depth","full_reads_percent"]]
 
 
-# In[21]:
+# In[10]:
 
 
 X.head()
 
 
-# In[22]:
+# In[11]:
 
 
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42)
+#X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42)
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3)
 
 
 # ## Подбор модели
 
-# In[23]:
+# In[12]:
 
 
-regr = RandomForestRegressor(random_state=0)
+#regr = RandomForestRegressor(random_state=0)
+regr = RandomForestRegressor()
 
 
 # Обучим модель
 
-# In[24]:
+# In[13]:
 
 
 regr.fit(X_train, y_train)
@@ -155,7 +135,7 @@ regr.fit(X_train, y_train)
 
 # Предскажем значения
 
-# In[25]:
+# In[14]:
 
 
 pred = regr.predict(X_test)
@@ -163,7 +143,7 @@ pred = regr.predict(X_test)
 
 # ## Оценка точности
 
-# In[26]:
+# In[15]:
 
 
 score_views = r2_score(y_test["views"], pred[:,0])
@@ -171,7 +151,7 @@ score_depth = r2_score(y_test["depth"], pred[:,1])
 score_frp = r2_score(y_test["full_reads_percent"], pred[:,2])
 
 
-# In[27]:
+# In[16]:
 
 
 score = 0.4 * score_views + 0.3 * score_depth + 0.3 * score_frp
@@ -179,10 +159,10 @@ score = 0.4 * score_views + 0.3 * score_depth + 0.3 * score_frp
 score
 
 
-# In[ ]:
+# In[17]:
 
 
-
+0.5548928782936524
 
 
 # In[ ]:
