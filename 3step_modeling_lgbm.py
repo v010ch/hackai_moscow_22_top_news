@@ -106,9 +106,9 @@ DIR_SUBM_PART = os.path.join(os.getcwd(), 'subm', 'partial')
 # In[8]:
 
 
-x_train  = pd.read_csv(os.path.join(DIR_DATA, 'x_train.csv'), index_col= 0)
-x_val    = pd.read_csv(os.path.join(DIR_DATA, 'x_val.csv'), index_col= 0)
-df_test  = pd.read_csv(os.path.join(DIR_DATA, 'test_upd.csv'), index_col= 0)
+x_train  = pd.read_csv(os.path.join(DIR_DATA, 'x_train.csv'))#, index_col= 0)
+x_val    = pd.read_csv(os.path.join(DIR_DATA, 'x_val.csv'))#, index_col= 0)
+df_test  = pd.read_csv(os.path.join(DIR_DATA, 'test_upd.csv'))#, index_col= 0)
 
 with open(os.path.join(DIR_DATA, 'cat_columns.pkl'), 'rb') as pickle_file:
     cat_cols = pkl.load(pickle_file)
@@ -140,7 +140,7 @@ x_train.shape, x_val.shape, y_train.shape, y_val.shape
 # In[11]:
 
 
-cat_cols + num_cols
+#cat_cols + num_cols
 
 
 # In[ ]:
@@ -233,7 +233,7 @@ params = {
     'task': 'train', 
     'boosting': 'gbdt',
     'objective': 'regression',
-    'num_leaves': 10,
+    'num_leaves': 6,
     'learning_rates': 0.05,
     'metric': {'l2','l1'},
     'verbose': -1,
@@ -417,27 +417,27 @@ pred_depth = lgb_model_depth.predict(df_test[cat_cols + num_cols])
 pred_frp   = lgb_model_frp.predict(  df_test[cat_cols + num_cols])
 
 
-# In[25]:
+# In[30]:
 
 
 subm = pd.DataFrame()
-subm['document_id'] = df_test.index
+subm['document_id'] = df_test.document_id
 
 subm['views'] = pred_views
 subm['depth'] = pred_depth
 subm['full_reads_percent'] = pred_frp
 
 
-# In[26]:
+# In[31]:
 
 
 subm.head()
 
 
-# In[27]:
+# In[32]:
 
 
-subm.to_csv(os.path.join(DIR_SUBM, '1_lgb_baseline_test.csv'), index = False)
+subm.to_csv(os.path.join(DIR_SUBM, '3_lgb_ttl_emb_depth_frp.csv'), index = False)
 
 
 # In[ ]:

@@ -52,7 +52,7 @@ DIR_DATA  = os.path.join(os.getcwd(), 'data')
 
 # энкодеры для кодирования категориальных переменных. 
 
-# но, например, для catboost не требуетмся такого кодирования, так что оригинальный признак так же останется в датасете,   
+# но, например, для catboost не требуется такого кодирования, так что оригинальный признак так же останется в датасете,   
 # а в модель будут передоваться признаки только через параметр features.
 all_encoders = [ce.BackwardDifferenceEncoder(), 
 ce.BaseNEncoder(), 
@@ -98,7 +98,46 @@ df_train.shape, df_test.shape
 
 
 
+# Добавляем эмбединги
+
 # In[6]:
+
+
+# should try and without it
+clean_text = lambda x:' '.join(re.sub('\n|\r|\t|[^а-я]', ' ', x.lower()).split())
+
+
+# In[ ]:
+
+
+
+
+
+# In[ ]:
+
+
+
+
+
+# In[ ]:
+
+
+
+
+
+# In[ ]:
+
+
+
+
+
+# In[ ]:
+
+
+
+
+
+# In[7]:
 
 
 df_train['publish_date'] = pd.to_datetime(df_train['publish_date'])
@@ -115,13 +154,13 @@ df_test['publish_date']  = pd.to_datetime(df_test['publish_date'])
 
 # этих категорий нет в тесте, а в трейне на них приходится всего 3 записи. они явно лишние.
 
-# In[7]:
+# In[8]:
 
 
 exclude_category = {'5e54e2089a7947f63a801742', '552e430f9a79475dd957f8b3', '5e54e22a9a7947f560081ea2' }
 
 
-# In[8]:
+# In[9]:
 
 
 df_train = df_train.query('category not in @exclude_category')
@@ -130,14 +169,14 @@ df_train.shape
 
 # уберем статьи раньше минимальной даты в тесте. для начала так, дальше можно будет поиграться.
 
-# In[9]:
+# In[10]:
 
 
 #min_time = pd.Timestamp('2021-05-17')
 min_time = df_test['publish_date'].min()
 
 
-# In[10]:
+# In[11]:
 
 
 df_train = df_train[df_train.publish_date > min_time]
@@ -172,7 +211,7 @@ df_train.shape
 
 # ## publish_date
 
-# In[11]:
+# In[12]:
 
 
 df_train['hour'] = df_train['publish_date'].dt.hour
@@ -184,7 +223,7 @@ df_train['day']    = pd.to_datetime(df_train['publish_date']).dt.strftime("%d").
 df_train['mounth'] = pd.to_datetime(df_train['publish_date']).dt.strftime("%m").astype(int)
 
 
-# In[12]:
+# In[13]:
 
 
 df_test['hour'] = df_test['publish_date'].dt.hour
@@ -202,7 +241,7 @@ df_test['mounth'] = pd.to_datetime(df_test['publish_date']).dt.strftime("%m").as
 
 
 
-# In[13]:
+# In[14]:
 
 
 df_train.drop('publish_date', axis = 1, inplace = True)
@@ -227,7 +266,7 @@ df_test.drop('publish_date', axis = 1, inplace = True)
 
 # авторы считываются как строки, а не как массив строк. исправим.
 
-# In[14]:
+# In[15]:
 
 
 df_train['authors']  = df_train.authors.apply(lambda x: literal_eval(x))
@@ -270,7 +309,7 @@ df_test['authors']   = df_test.authors.apply( lambda x: literal_eval(x))
 
 # ## tags
 
-# In[15]:
+# In[16]:
 
 
 df_train['tags']  = df_train.tags.apply(lambda x: literal_eval(x))
@@ -292,13 +331,13 @@ df_test['tags']   = df_test.tags.apply( lambda x: literal_eval(x))
 # разделяем категориальные и числовые признаки   
 # числовые нормализуем
 
-# In[16]:
+# In[17]:
 
 
 df_train.columns
 
 
-# In[17]:
+# In[18]:
 
 
 num_cols = ['ctr']
@@ -307,7 +346,7 @@ cat_cols = ['hour', 'dow', 'weekend', 'day', 'mounth']
 
 # ## normalize
 
-# In[18]:
+# In[19]:
 
 
 #scaler = preprocessing.MinMaxScaler()   #Transform features by scaling each feature to a given range.
@@ -317,32 +356,32 @@ scaler = preprocessing.StandardScaler()  #Standardize features by removing the m
 scaler.fit(df_train[num_cols])
 
 
-# In[19]:
+# In[20]:
 
 
 #df_train[num_cols].head(5)
 
 
-# In[20]:
+# In[21]:
 
 
 #df_test[num_cols].head(5)
 
 
-# In[21]:
+# In[22]:
 
 
 df_train[num_cols] = scaler.transform(df_train[num_cols])
 df_test[num_cols]  = scaler.transform(df_test[num_cols])
 
 
-# In[22]:
+# In[23]:
 
 
 #df_train[num_cols].head(5)
 
 
-# In[23]:
+# In[24]:
 
 
 #df_test[num_cols].head(5)
@@ -352,6 +391,56 @@ df_test[num_cols]  = scaler.transform(df_test[num_cols])
 
 
 
+
+
+# Добавляем эмбединги
+
+# In[25]:
+
+
+# sberbank-ai/sbert_large_mt_nlu_ru       1024  1.71Gb
+# DeepPavlov/rubert-base-cased-sentence   768   0.7Gb
+# DeepPavlov/rubert-base-cased-conversational  768
+# DeepPavlov/rubert-base-cased            768
+# sberbank-ai/sbert_large_nlu_ru          1024  1.71Gb
+
+MODEL_FOLDER = 'sbert_large_mt_nlu_ru'
+MAX_LENGTH = 24
+
+
+# In[26]:
+
+
+emb_train = pd.read_csv(os.path.join(DIR_DATA, f'ttl_emb_train_{MODEL_FOLDER}_{MAX_LENGTH}.csv'))
+#emb_train.drop(['document_id', 'title'], axis = 1 , inplace = True)
+emb_train.drop(['title'], axis = 1 , inplace = True)
+
+df_train = df_train.merge(emb_train, on = 'document_id', validate = 'one_to_one')
+df_train.shape, emb_train.shape
+
+
+# In[27]:
+
+
+emb_test = pd.read_csv(os.path.join(DIR_DATA, f'ttl_emb_test_{MODEL_FOLDER}_{MAX_LENGTH}.csv'))
+#emb_test.drop(['document_id', 'title'], axis = 1 , inplace = True)
+emb_test.drop(['title'], axis = 1 , inplace = True)
+
+df_test = df_test.merge(emb_test, on = 'document_id', validate = 'one_to_one')
+df_test.shape, emb_test.shape
+
+
+# In[28]:
+
+
+num_cols = ['ctr'] + list(emb_train.columns)
+
+
+# In[35]:
+
+
+if 'document_id' in num_cols:
+    num_cols.remove('document_id')
 
 
 # In[ ]:
@@ -365,7 +454,7 @@ df_test[num_cols]  = scaler.transform(df_test[num_cols])
 # вероятно лучше разделять до нормализации и категориальных энкодеров, что бы значения из валидационной выборки не были в учтены в тесте   
 # однако, на первой итерации устроит и разбиение после всех преобразований
 
-# In[24]:
+# In[37]:
 
 
 x_train, x_val = train_test_split(df_train, test_size = 0.2)
@@ -386,50 +475,32 @@ df_train.shape, x_train.shape, x_val.shape
 
 
 
-# In[25]:
+# In[38]:
 
 
-x_train.to_csv(os.path.join(DIR_DATA, 'x_train.csv'))
-x_val.to_csv(os.path.join(DIR_DATA, 'x_val.csv'))
+x_train.to_csv(os.path.join(DIR_DATA,  'x_train.csv'))
+x_val.to_csv(os.path.join(DIR_DATA,    'x_val.csv'))
 df_test.to_csv(os.path.join( DIR_DATA, 'test_upd.csv'))
 
 
-# In[26]:
+# In[39]:
 
 
 with open(os.path.join(DIR_DATA, 'num_columns.pkl'), 'wb') as pickle_file:
     pkl.dump(num_cols, pickle_file)
 
 
-# In[27]:
+# In[40]:
 
 
 with open(os.path.join(DIR_DATA, 'cat_columns.pkl'), 'wb') as pickle_file:
     pkl.dump(cat_cols, pickle_file)
 
 
-# In[28]:
+# In[41]:
 
 
 df_test.columns
-
-
-# In[ ]:
-
-
-
-
-
-# In[ ]:
-
-
-
-
-
-# In[ ]:
-
-
-
 
 
 # In[ ]:

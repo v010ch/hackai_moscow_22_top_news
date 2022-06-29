@@ -57,7 +57,7 @@ np.random.seed(62185)
 
 
 
-# In[ ]:
+# In[4]:
 
 
 def plot_hists_sns(inp_df, inp_feature):
@@ -143,7 +143,7 @@ def plot_hists_sns(inp_df, inp_feature):
 
 # Выполним загрузу датсета
 
-# In[4]:
+# In[5]:
 
 
 DIR_DATA  = os.path.join(os.getcwd(), 'data')
@@ -158,7 +158,7 @@ DIR_SUBM  = os.path.join(os.getcwd(), 'subm')
 
 
 
-# In[5]:
+# In[6]:
 
 
 df_train = pd.read_csv(os.path.join(DIR_DATA, 'train.csv'), index_col= 0)
@@ -185,13 +185,13 @@ df_test = pd.read_csv(os.path.join(DIR_DATA, 'test.csv'), index_col= 0)
 
 # # Проанализируем датасет
 
-# In[6]:
+# In[7]:
 
 
 df_train.info()
 
 
-# In[7]:
+# In[8]:
 
 
 df_train.describe()
@@ -209,7 +209,7 @@ df_train.describe()
 # ● **category** - категория статьи   
 # ● **tags** - ключевые слова в статье   
 
-# In[8]:
+# In[9]:
 
 
 df_train.shape, df_train.index.nunique()
@@ -223,7 +223,7 @@ df_train.shape, df_train.index.nunique()
 
 # # publish_date
 
-# In[9]:
+# In[10]:
 
 
 df_train['publish_date'] = pd.to_datetime(df_train['publish_date'])
@@ -237,7 +237,7 @@ df_train['day'] = pd.to_datetime(df_train['publish_date']).dt.strftime("%d").ast
 df_train['mounth'] = pd.to_datetime(df_train['publish_date']).dt.strftime("%m").astype(int)
 
 
-# In[115]:
+# In[11]:
 
 
 df_test['publish_date'] = pd.to_datetime(df_test['publish_date'])
@@ -245,31 +245,48 @@ df_test['publish_date'] = pd.to_datetime(df_test['publish_date'])
 
 # проверим границы дат
 
-# In[117]:
+# In[12]:
 
 
 df_train['publish_date'].min(), df_test['publish_date'].min()
 
 
-# In[118]:
+# In[13]:
 
 
 df_train['publish_date'].max(), df_test['publish_date'].max()
 
 
-# In[120]:
+# In[14]:
 
 
 df_train[df_train.publish_date > df_test['publish_date'].min()].shape
 
 
-# In[121]:
+# In[15]:
 
 
 df_train[df_train.publish_date < df_test['publish_date'].min()].shape
 
 
-# всего 6 статей в трейне датой раньше, чем минимальная дата в тесте. вероятно их следует исключить исходя из предположения, что они из другого распределения
+# In[23]:
+
+
+#df_train.sort_values(by='publish_date').head(15)
+
+
+# In[20]:
+
+
+#df_test.sort_values(by='publish_date').head(15)
+
+
+# в тесте скачек с 2021-10-04 на 2022-01-31 21:00:26. Далее даты идут регулярно.
+
+# всего 6 статей в трейне датой раньше, чем минимальная дата в тесте.   
+# далее скачек: 2021-05-17, 2021-09-17, 2021-12-17, 2021-12-17, 2022-01-29 06:00:22.   
+# в целом все даты 21 года выглядят оторванными, однако, могут находится в том же распределении, так что, вероятно, их стоит оставить.   
+# статьи из 17 и 18 гг, вероятно стоит исключить после проверки на наличия в них особенных авторов или тэгов.
 
 # In[125]:
 

@@ -138,23 +138,31 @@ x_train.shape, x_val.shape, y_train.shape, y_val.shape
 # In[11]:
 
 
-cat_cols + num_cols
+x_train.shape
 
 
 # In[12]:
 
 
+#cat_cols + num_cols
+
+
+# In[38]:
+
+
 #views
-train_ds_views = Pool(x_train[cat_cols + num_cols],
+#train_ds_views = Pool(x_train[cat_cols + num_cols],
+train_ds_views = Pool(x_train[cat_cols + ['ctr']],
                       y_train[['views']],
                       cat_features = cat_cols,
-                      feature_names = cat_cols + num_cols
+                      #feature_names = cat_cols + num_cols
                      )
 
-val_ds_views   = Pool(x_val[cat_cols + num_cols],
+#val_ds_views   = Pool(x_val[cat_cols + num_cols],
+val_ds_views   = Pool(x_val[cat_cols + ['ctr']],
                       y_val[['views']],
                       cat_features = cat_cols,
-                      feature_names = cat_cols + num_cols
+                      #feature_names = cat_cols + num_cols
                      )
 
 
@@ -194,13 +202,14 @@ val_ds_frp   = Pool(x_val[cat_cols + num_cols],
 
 # ## views
 
-# In[13]:
+# In[43]:
 
 
 cb_model_views = CatBoostRegressor(iterations=20,
-                                   learning_rate=1,
-                                   depth=4,
-                                   random_seed = CB_RANDOMSEED,
+                                 learning_rate=0.1,
+                                 depth=4,
+                                 random_seed = CB_RANDOMSEED,
+                   #n_estimators=100,
                                   )
 # Fit model
 cb_model_views.fit(train_ds_views,
@@ -210,7 +219,7 @@ cb_model_views.fit(train_ds_views,
                   )
 
 
-# In[14]:
+# In[44]:
 
 
 # Get predictions and metrics
@@ -225,13 +234,14 @@ train_score_views, val_score_views
 (0.5100195781796532, 0.5065575808145328)
 # ## depth
 
-# In[15]:
+# In[16]:
 
 
-cb_model_depth = CatBoostRegressor(iterations=20,
-                                   learning_rate=1,
-                                   depth=4,
-                                   random_seed = CB_RANDOMSEED,
+cb_model_depth = CatBoostRegressor(#iterations=1000,
+                                 learning_rate=0.05,
+                                 depth=10,
+                                 random_seed = CB_RANDOMSEED,
+                   n_estimators=100,
                                   )
 # Fit model
 cb_model_depth.fit(train_ds_depth,
@@ -240,7 +250,7 @@ cb_model_depth.fit(train_ds_depth,
                   )
 
 
-# In[16]:
+# In[21]:
 
 
 # Get predictions and metrics
@@ -255,13 +265,16 @@ train_score_depth, val_score_depth
 (0.6426108706670193, 0.5285762915493839)
 # ## full_reads_percent
 
-# In[17]:
+# In[18]:
 
 
-cb_model_frp = CatBoostRegressor(iterations=20,
-                                 learning_rate=1,
-                                 depth=4,
+cb_model_frp = CatBoostRegressor(#iterations=1000,
+                                 learning_rate=0.05,
+                                 depth=10,
                                  random_seed = CB_RANDOMSEED,
+                   n_estimators=100,
+                                 #n_estimators=100,
+    #num_trees=None,
                                 )
 # Fit model
 cb_model_frp.fit(train_ds_frp,
@@ -270,7 +283,7 @@ cb_model_frp.fit(train_ds_frp,
                   )
 
 
-# In[18]:
+# In[19]:
 
 
 # Get predictions and metrics
@@ -289,7 +302,7 @@ train_score_frp, val_score_frp
 
 
 
-# In[19]:
+# In[45]:
 
 
 score_train = 0.4 * train_score_views + 0.3 * train_score_depth + 0.3 * train_score_frp
@@ -306,7 +319,7 @@ score_train, score_val
 
 # ## save models
 
-# In[20]:
+# In[46]:
 
 
 cb_model_views.save_model(os.path.join(DIR_MODELS, 'cb_views.cbm'), 
@@ -336,7 +349,7 @@ cb_model_frp.save_model(os.path.join(DIR_MODELS, 'cb_frp.cbm'),
 
 # ## make predict
 
-# In[21]:
+# In[47]:
 
 
 pred_views = cb_model_views.predict(df_test[cat_cols + num_cols])
@@ -344,7 +357,7 @@ pred_depth = cb_model_depth.predict(df_test[cat_cols + num_cols])
 pred_frp   = cb_model_frp.predict(  df_test[cat_cols + num_cols])
 
 
-# In[22]:
+# In[48]:
 
 
 subm = pd.DataFrame()
@@ -355,16 +368,16 @@ subm['depth'] = pred_depth
 subm['full_reads_percent'] = pred_frp
 
 
-# In[23]:
+# In[49]:
 
 
 subm.head()
 
 
-# In[24]:
+# In[50]:
 
 
-subm.to_csv(os.path.join(DIR_SUBM, '1_cb_baseline_test.csv'), index = False)
+subm.to_csv(os.path.join(DIR_SUBM, '3_cb_ttls_emd_depth.csv'), index = False)
 
 
 # In[ ]:
