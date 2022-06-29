@@ -272,6 +272,21 @@ train_score_views, val_score_views
 
 
 
+# In[31]:
+
+
+lgb.plot_importance(lgb_model_views, max_num_features = 30, figsize = (30, 16), importance_type = 'gain')
+#lgb.plot_importance(lgb_model_views, max_num_features = 30, figsize = (30, 16), importance_type = 'split')
+# importance_type (str, optional (default="auto")) – How the importance is calculated. If “auto”, if booster parameter is LGBMModel, booster.importance_type attribute is used; 
+# “split” otherwise. If “split”, result contains numbers of times the feature is used in a model. If “gain”, result contains total gains of splits which use the feature.
+
+
+# In[ ]:
+
+
+
+
+
 # In[ ]:
 
 
@@ -280,7 +295,7 @@ train_score_views, val_score_views
 
 # ## depth
 
-# In[16]:
+# In[17]:
 
 
 # defining parameters 
@@ -296,7 +311,7 @@ params = {
 }
 
 
-# In[17]:
+# In[18]:
 
 
 # fitting the model
@@ -308,7 +323,7 @@ lgb_model_depth = lgb.train(params,
                            )
 
 
-# In[18]:
+# In[19]:
 
 
 # Get predictions and metrics
@@ -327,9 +342,22 @@ train_score_depth, val_score_depth
 
 
 
+# In[26]:
+
+
+lgb.plot_importance(lgb_model_depth, max_num_features = 30, figsize = (30, 16), importance_type = 'gain')
+#lgb.plot_importance(lgb_model_depth, max_num_features = 30, figsize = (30, 16), importance_type = 'split')
+
+
+# In[ ]:
+
+
+
+
+
 # ## full_reads_percent
 
-# In[19]:
+# In[21]:
 
 
 # defining parameters 
@@ -345,7 +373,7 @@ params = {
 }
 
 
-# In[20]:
+# In[22]:
 
 
 # fitting the model
@@ -357,7 +385,7 @@ lgb_model_frp = lgb.train(params,
                            )
 
 
-# In[21]:
+# In[23]:
 
 
 # Get predictions and metrics
@@ -370,6 +398,25 @@ val_score_frp  = r2_score(y_val["full_reads_percent"],   preds_val_frp)
 train_score_frp, val_score_frp
 
 (0.30008084990246797, 0.2593834027777585)
+# In[ ]:
+
+
+
+
+
+# In[27]:
+
+
+lgb.plot_importance(lgb_model_frp, max_num_features = 30, figsize = (30, 16), importance_type = 'gain')
+#lgb.plot_importance(lgb_model_frp, max_num_features = 30, figsize = (30, 16), importance_type = 'split')
+
+
+# In[ ]:
+
+
+
+
+
 # In[ ]:
 
 

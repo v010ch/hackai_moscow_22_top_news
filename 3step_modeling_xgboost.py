@@ -26,7 +26,7 @@ from xgboost import XGBRegressor
 from sklearn.metrics import r2_score
 
 
-# In[24]:
+# In[4]:
 
 
 from xgboost import __version__ as xgb_version
@@ -133,13 +133,31 @@ x_train.shape, x_val.shape, y_train.shape, y_val.shape
 # In[11]:
 
 
-cat_cols + num_cols
+#cat_cols + num_cols
+
+
+# In[12]:
+
+
+num_cols = ['ctr']#, 'weekend']
 
 
 # In[ ]:
 
 
 
+
+
+# In[13]:
+
+
+def plot_importance(inp_model, imp_number = 30, imp_type = 'weight'):
+    feature_important = inp_model.get_booster().get_score(importance_type=imp_type)
+    keys = list(feature_important.keys())
+    values = list(feature_important.values())
+
+    data = pd.DataFrame(data=values, index=keys, columns=["score"]).sort_values(by = "score", ascending=False)
+    data.nlargest(imp_number, columns="score").plot(kind='barh', figsize = (30,16)) ## plot top 40 features
 
 
 # In[ ]:
@@ -150,7 +168,7 @@ cat_cols + num_cols
 
 # ## views
 
-# In[12]:
+# In[14]:
 
 
 xgb_model_views = XGBRegressor(n_estimators=1000, 
@@ -175,7 +193,7 @@ xgb_model_views.fit(x_train[num_cols], y_train['views'],
 
 
 
-# In[13]:
+# In[15]:
 
 
 # Get predictions and metrics
@@ -194,9 +212,21 @@ train_score_views, val_score_views
 
 
 
+# In[16]:
+
+
+plot_importance(xgb_model_views, 30, 'weight')
+
+
+# In[ ]:
+
+
+
+
+
 # ## depth
 
-# In[14]:
+# In[17]:
 
 
 xgb_model_depth = XGBRegressor(n_estimators=1000, 
@@ -215,7 +245,7 @@ xgb_model_depth.fit(x_train[num_cols], y_train['depth'],
                    )
 
 
-# In[15]:
+# In[18]:
 
 
 # Get predictions and metrics
@@ -234,9 +264,21 @@ train_score_depth, val_score_depth
 
 
 
+# In[19]:
+
+
+plot_importance(xgb_model_depth, 30, 'weight')
+
+
+# In[ ]:
+
+
+
+
+
 # ## full_reads_percent
 
-# In[16]:
+# In[20]:
 
 
 xgb_model_frp = XGBRegressor(n_estimators=1000, 
@@ -255,7 +297,7 @@ xgb_model_frp.fit(x_train[num_cols], y_train['full_reads_percent'],
                  )
 
 
-# In[17]:
+# In[21]:
 
 
 # Get predictions and metrics
@@ -274,7 +316,19 @@ train_score_frp, val_score_frp
 
 
 
-# In[18]:
+# In[22]:
+
+
+plot_importance(xgb_model_frp, 30, 'weight')
+
+
+# In[ ]:
+
+
+
+
+
+# In[23]:
 
 
 score_train = 0.4 * train_score_views + 0.3 * train_score_depth + 0.3 * train_score_frp
@@ -291,7 +345,7 @@ score_train, score_val
 
 # ## save models
 
-# In[19]:
+# In[20]:
 
 
 xgb_model_views.save_model(os.path.join(DIR_MODELS, 'xgb_views.json'), 
@@ -312,7 +366,7 @@ xgb_model_frp.save_model(os.path.join(DIR_MODELS, 'xgb_frp.json'),
 
 # ## make predict
 
-# In[20]:
+# In[21]:
 
 
 pred_views = xgb_model_views.predict(df_test[num_cols])
@@ -320,7 +374,7 @@ pred_depth = xgb_model_depth.predict(df_test[num_cols])
 pred_frp   = xgb_model_frp.predict(  df_test[num_cols])
 
 
-# In[21]:
+# In[22]:
 
 
 subm = pd.DataFrame()
@@ -331,16 +385,16 @@ subm['depth'] = pred_depth
 subm['full_reads_percent'] = pred_frp
 
 
-# In[22]:
+# In[23]:
 
 
 subm.head()
 
 
-# In[23]:
+# In[24]:
 
 
-subm.to_csv(os.path.join(DIR_SUBM, '1_xgb_baseline_test.csv'), index = False)
+subm.to_csv(os.path.join(DIR_SUBM, '4_xgb_ctr_wknd.csv'), index = False)
 
 
 # In[ ]:

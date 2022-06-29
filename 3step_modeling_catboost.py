@@ -1,19 +1,19 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[1]:
+# In[ ]:
 
 
 get_ipython().run_line_magic('load_ext', 'watermark')
 
 
-# In[2]:
+# In[ ]:
 
 
 get_ipython().run_line_magic('watermark', '')
 
 
-# In[3]:
+# In[ ]:
 
 
 import os
@@ -25,8 +25,11 @@ import pandas as pd
 from sklearn.metrics import r2_score
 from catboost import CatBoostRegressor, Pool
 
+import matplotlib.pyplot as plt
+import seaborn as sns
 
-# In[4]:
+
+# In[ ]:
 
 
 from catboost import __version__ as cb_version
@@ -36,7 +39,7 @@ print(f'cb_version: {cb_version}')
 print(f'sklearn_version: {sklearn_version}')
 
 
-# In[5]:
+# In[ ]:
 
 
 get_ipython().run_line_magic('watermark', '--iversions')
@@ -56,7 +59,7 @@ get_ipython().run_line_magic('watermark', '--iversions')
 
 # ## Reproducibility block
 
-# In[6]:
+# In[ ]:
 
 
 # seed the RNG for all devices (both CPU and CUDA)
@@ -84,7 +87,7 @@ CB_RANDOMSEED = 309487
 
 
 
-# In[7]:
+# In[ ]:
 
 
 DIR_DATA   = os.path.join(os.getcwd(), 'data')
@@ -101,7 +104,7 @@ DIR_SUBM_PART = os.path.join(os.getcwd(), 'subm', 'partial')
 
 # ## Load data
 
-# In[8]:
+# In[ ]:
 
 
 x_train  = pd.read_csv(os.path.join(DIR_DATA, 'x_train.csv'), index_col= 0)
@@ -115,7 +118,7 @@ with open(os.path.join(DIR_DATA, 'num_columns.pkl'), 'rb') as pickle_file:
     num_cols = pkl.load(pickle_file)
 
 
-# In[9]:
+# In[ ]:
 
 
 x_train.shape, x_val.shape, df_test.shape, len(cat_cols), len(num_cols)
@@ -123,7 +126,7 @@ x_train.shape, x_val.shape, df_test.shape, len(cat_cols), len(num_cols)
 
 # отделяем метки от данных
 
-# In[10]:
+# In[ ]:
 
 
 y_train = x_train[['views', 'depth', 'full_reads_percent']]
@@ -135,19 +138,19 @@ x_val.drop(  ['views', 'depth', 'full_reads_percent'], axis = 1, inplace = True)
 x_train.shape, x_val.shape, y_train.shape, y_val.shape
 
 
-# In[11]:
+# In[ ]:
 
 
 x_train.shape
 
 
-# In[12]:
+# In[ ]:
 
 
 #cat_cols + num_cols
 
 
-# In[38]:
+# In[ ]:
 
 
 #views
@@ -200,9 +203,53 @@ val_ds_frp   = Pool(x_val[cat_cols + num_cols],
 
 
 
+# In[ ]:
+
+
+def plot_feature_importance2(inp_model, inp_pool, imp_number = 30):
+    
+    data = pd.DataFrame({'feature_importance': inp_model.get_feature_importance(inp_pool), 
+              'feature_names': inp_pool.get_feature_names()}).sort_values(by=['feature_importance'], 
+                                                       ascending=True)
+    
+    data.nlargest(imp_number, columns="feature_importance").plot(kind='barh', figsize = (30,16)) ## plot top 40 features
+
+
+# In[ ]:
+
+
+def plot_feature_importance(importance,names,model_type, imp_number = 30):
+    
+    #Create arrays from feature importance and feature names
+    feature_importance = np.array(importance)
+    feature_names = np.array(names)
+    
+    #Create a DataFrame using a Dictionary
+    data={'feature_names':feature_names,'feature_importance':feature_importance}
+    fi_df = pd.DataFrame(data)
+    
+    #Sort the DataFrame in order decreasing feature importance
+    fi_df.sort_values(by=['feature_importance'], ascending=False,inplace=True)
+    
+    #Define size of bar plot
+    plt.figure(figsize=(10,8))
+    #Plot Searborn bar chart
+    sns.barplot(x=fi_df['feature_importance'][:imp_number], y=fi_df['feature_names'][:imp_number])
+    #Add chart labels
+    plt.title(model_type + 'FEATURE IMPORTANCE')
+    plt.xlabel('FEATURE IMPORTANCE')
+    plt.ylabel('FEATURE NAMES')
+
+
+# In[ ]:
+
+
+
+
+
 # ## views
 
-# In[43]:
+# In[ ]:
 
 
 cb_model_views = CatBoostRegressor(iterations=20,
@@ -219,7 +266,7 @@ cb_model_views.fit(train_ds_views,
                   )
 
 
-# In[44]:
+# In[ ]:
 
 
 # Get predictions and metrics
@@ -232,9 +279,28 @@ val_score_views   = r2_score(y_val["views"],   preds_val_views)
 train_score_views, val_score_views
 
 (0.5100195781796532, 0.5065575808145328)
+# In[ ]:
+
+
+
+
+
+# In[ ]:
+
+
+#plot_feature_importance(cb_model_views, train_ds_views, 30)
+plot_feature_importance(cb_model_views.get_feature_importance(), train_ds_views.get_feature_names(), 'CATBOOST')
+
+
+# In[ ]:
+
+
+
+
+
 # ## depth
 
-# In[16]:
+# In[ ]:
 
 
 cb_model_depth = CatBoostRegressor(#iterations=1000,
@@ -250,7 +316,7 @@ cb_model_depth.fit(train_ds_depth,
                   )
 
 
-# In[21]:
+# In[ ]:
 
 
 # Get predictions and metrics
@@ -263,9 +329,28 @@ val_score_depth   = r2_score(y_val["depth"],   preds_val_depth)
 train_score_depth, val_score_depth
 
 (0.6426108706670193, 0.5285762915493839)
+# In[ ]:
+
+
+
+
+
+# In[ ]:
+
+
+#plot_feature_importance(cb_model_views, train_ds_views, 30)
+plot_feature_importance(cb_model_depth.get_feature_importance(), train_ds_depth.get_feature_names(), 'CATBOOST')
+
+
+# In[ ]:
+
+
+
+
+
 # ## full_reads_percent
 
-# In[18]:
+# In[ ]:
 
 
 cb_model_frp = CatBoostRegressor(#iterations=1000,
@@ -283,15 +368,15 @@ cb_model_frp.fit(train_ds_frp,
                   )
 
 
-# In[19]:
+# In[ ]:
 
 
 # Get predictions and metrics
 preds_train_frp = cb_model_frp.predict(x_train[cat_cols + num_cols])
-preds_val_frp  = cb_model_frp.predict(val_ds_frp)
+preds_val_frp   = cb_model_frp.predict(val_ds_frp)
 
 train_score_frp = r2_score(y_train["full_reads_percent"], preds_train_frp)
-val_score_frp  = r2_score(y_val["full_reads_percent"],   preds_val_frp)
+val_score_frp   = r2_score(y_val["full_reads_percent"],   preds_val_frp)
 
 train_score_frp, val_score_frp
 
@@ -302,7 +387,20 @@ train_score_frp, val_score_frp
 
 
 
-# In[45]:
+# In[ ]:
+
+
+#plot_feature_importance(cb_model_views, train_ds_views, 30)
+plot_feature_importance(cb_model_frp.get_feature_importance(), train_ds_frp.get_feature_names(), 'CATBOOST')
+
+
+# In[ ]:
+
+
+
+
+
+# In[ ]:
 
 
 score_train = 0.4 * train_score_views + 0.3 * train_score_depth + 0.3 * train_score_frp
@@ -319,7 +417,7 @@ score_train, score_val
 
 # ## save models
 
-# In[46]:
+# In[ ]:
 
 
 cb_model_views.save_model(os.path.join(DIR_MODELS, 'cb_views.cbm'), 
@@ -349,7 +447,7 @@ cb_model_frp.save_model(os.path.join(DIR_MODELS, 'cb_frp.cbm'),
 
 # ## make predict
 
-# In[47]:
+# In[ ]:
 
 
 pred_views = cb_model_views.predict(df_test[cat_cols + num_cols])
@@ -357,7 +455,7 @@ pred_depth = cb_model_depth.predict(df_test[cat_cols + num_cols])
 pred_frp   = cb_model_frp.predict(  df_test[cat_cols + num_cols])
 
 
-# In[48]:
+# In[ ]:
 
 
 subm = pd.DataFrame()
@@ -368,13 +466,13 @@ subm['depth'] = pred_depth
 subm['full_reads_percent'] = pred_frp
 
 
-# In[49]:
+# In[ ]:
 
 
 subm.head()
 
 
-# In[50]:
+# In[ ]:
 
 
 subm.to_csv(os.path.join(DIR_SUBM, '3_cb_ttls_emd_depth.csv'), index = False)
