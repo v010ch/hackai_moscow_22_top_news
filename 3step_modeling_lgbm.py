@@ -272,7 +272,7 @@ train_score_views, val_score_views
 
 
 
-# In[31]:
+# In[16]:
 
 
 lgb.plot_importance(lgb_model_views, max_num_features = 30, figsize = (30, 16), importance_type = 'gain')
@@ -342,7 +342,7 @@ train_score_depth, val_score_depth
 
 
 
-# In[26]:
+# In[20]:
 
 
 lgb.plot_importance(lgb_model_depth, max_num_features = 30, figsize = (30, 16), importance_type = 'gain')
@@ -404,7 +404,7 @@ train_score_frp, val_score_frp
 
 
 
-# In[27]:
+# In[24]:
 
 
 lgb.plot_importance(lgb_model_frp, max_num_features = 30, figsize = (30, 16), importance_type = 'gain')
@@ -423,7 +423,7 @@ lgb.plot_importance(lgb_model_frp, max_num_features = 30, figsize = (30, 16), im
 
 
 
-# In[22]:
+# In[ ]:
 
 
 score_train = 0.4 * train_score_views + 0.3 * train_score_depth + 0.3 * train_score_frp
@@ -440,7 +440,7 @@ score_train, score_val
 
 # ## save models
 
-# In[23]:
+# In[ ]:
 
 
 lgb_model_views.save_model(os.path.join(DIR_MODELS, 'lgm_views.txt'), num_iteration = lgb_model_views.best_iteration)
@@ -456,7 +456,7 @@ lgb_model_frp.save_model(  os.path.join(DIR_MODELS, 'lgm_frp.txt'),   num_iterat
 
 # ## make predict
 
-# In[24]:
+# In[ ]:
 
 
 pred_views = lgb_model_views.predict(df_test[cat_cols + num_cols])
@@ -464,7 +464,7 @@ pred_depth = lgb_model_depth.predict(df_test[cat_cols + num_cols])
 pred_frp   = lgb_model_frp.predict(  df_test[cat_cols + num_cols])
 
 
-# In[30]:
+# In[ ]:
 
 
 subm = pd.DataFrame()
@@ -475,13 +475,13 @@ subm['depth'] = pred_depth
 subm['full_reads_percent'] = pred_frp
 
 
-# In[31]:
+# In[ ]:
 
 
 subm.head()
 
 
-# In[32]:
+# In[ ]:
 
 
 subm.to_csv(os.path.join(DIR_SUBM, '3_lgb_ttl_emb_depth_frp.csv'), index = False)

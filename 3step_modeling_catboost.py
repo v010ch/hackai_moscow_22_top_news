@@ -1,19 +1,19 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[ ]:
+# In[1]:
 
 
 get_ipython().run_line_magic('load_ext', 'watermark')
 
 
-# In[ ]:
+# In[2]:
 
 
 get_ipython().run_line_magic('watermark', '')
 
 
-# In[ ]:
+# In[3]:
 
 
 import os
@@ -29,7 +29,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 
 
-# In[ ]:
+# In[4]:
 
 
 from catboost import __version__ as cb_version
@@ -39,7 +39,7 @@ print(f'cb_version: {cb_version}')
 print(f'sklearn_version: {sklearn_version}')
 
 
-# In[ ]:
+# In[5]:
 
 
 get_ipython().run_line_magic('watermark', '--iversions')
@@ -59,7 +59,7 @@ get_ipython().run_line_magic('watermark', '--iversions')
 
 # ## Reproducibility block
 
-# In[ ]:
+# In[6]:
 
 
 # seed the RNG for all devices (both CPU and CUDA)
@@ -87,7 +87,7 @@ CB_RANDOMSEED = 309487
 
 
 
-# In[ ]:
+# In[7]:
 
 
 DIR_DATA   = os.path.join(os.getcwd(), 'data')
@@ -104,7 +104,7 @@ DIR_SUBM_PART = os.path.join(os.getcwd(), 'subm', 'partial')
 
 # ## Load data
 
-# In[ ]:
+# In[8]:
 
 
 x_train  = pd.read_csv(os.path.join(DIR_DATA, 'x_train.csv'), index_col= 0)
@@ -118,7 +118,7 @@ with open(os.path.join(DIR_DATA, 'num_columns.pkl'), 'rb') as pickle_file:
     num_cols = pkl.load(pickle_file)
 
 
-# In[ ]:
+# In[9]:
 
 
 x_train.shape, x_val.shape, df_test.shape, len(cat_cols), len(num_cols)
@@ -126,7 +126,7 @@ x_train.shape, x_val.shape, df_test.shape, len(cat_cols), len(num_cols)
 
 # отделяем метки от данных
 
-# In[ ]:
+# In[10]:
 
 
 y_train = x_train[['views', 'depth', 'full_reads_percent']]
@@ -138,19 +138,19 @@ x_val.drop(  ['views', 'depth', 'full_reads_percent'], axis = 1, inplace = True)
 x_train.shape, x_val.shape, y_train.shape, y_val.shape
 
 
-# In[ ]:
+# In[11]:
 
 
 x_train.shape
 
 
-# In[ ]:
+# In[12]:
 
 
 #cat_cols + num_cols
 
 
-# In[ ]:
+# In[13]:
 
 
 #views
@@ -203,7 +203,7 @@ val_ds_frp   = Pool(x_val[cat_cols + num_cols],
 
 
 
-# In[ ]:
+# In[14]:
 
 
 def plot_feature_importance2(inp_model, inp_pool, imp_number = 30):
@@ -215,7 +215,7 @@ def plot_feature_importance2(inp_model, inp_pool, imp_number = 30):
     data.nlargest(imp_number, columns="feature_importance").plot(kind='barh', figsize = (30,16)) ## plot top 40 features
 
 
-# In[ ]:
+# In[15]:
 
 
 def plot_feature_importance(importance,names,model_type, imp_number = 30):
@@ -249,7 +249,7 @@ def plot_feature_importance(importance,names,model_type, imp_number = 30):
 
 # ## views
 
-# In[ ]:
+# In[16]:
 
 
 cb_model_views = CatBoostRegressor(iterations=20,
@@ -266,7 +266,7 @@ cb_model_views.fit(train_ds_views,
                   )
 
 
-# In[ ]:
+# In[17]:
 
 
 # Get predictions and metrics
@@ -285,7 +285,7 @@ train_score_views, val_score_views
 
 
 
-# In[ ]:
+# In[18]:
 
 
 #plot_feature_importance(cb_model_views, train_ds_views, 30)
@@ -300,7 +300,7 @@ plot_feature_importance(cb_model_views.get_feature_importance(), train_ds_views.
 
 # ## depth
 
-# In[ ]:
+# In[19]:
 
 
 cb_model_depth = CatBoostRegressor(#iterations=1000,
@@ -316,7 +316,7 @@ cb_model_depth.fit(train_ds_depth,
                   )
 
 
-# In[ ]:
+# In[20]:
 
 
 # Get predictions and metrics
@@ -335,7 +335,7 @@ train_score_depth, val_score_depth
 
 
 
-# In[ ]:
+# In[21]:
 
 
 #plot_feature_importance(cb_model_views, train_ds_views, 30)
@@ -350,7 +350,7 @@ plot_feature_importance(cb_model_depth.get_feature_importance(), train_ds_depth.
 
 # ## full_reads_percent
 
-# In[ ]:
+# In[26]:
 
 
 cb_model_frp = CatBoostRegressor(#iterations=1000,
@@ -368,7 +368,7 @@ cb_model_frp.fit(train_ds_frp,
                   )
 
 
-# In[ ]:
+# In[23]:
 
 
 # Get predictions and metrics
@@ -387,7 +387,7 @@ train_score_frp, val_score_frp
 
 
 
-# In[ ]:
+# In[24]:
 
 
 #plot_feature_importance(cb_model_views, train_ds_views, 30)
@@ -400,7 +400,7 @@ plot_feature_importance(cb_model_frp.get_feature_importance(), train_ds_frp.get_
 
 
 
-# In[ ]:
+# In[25]:
 
 
 score_train = 0.4 * train_score_views + 0.3 * train_score_depth + 0.3 * train_score_frp

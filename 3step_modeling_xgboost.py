@@ -345,7 +345,7 @@ score_train, score_val
 
 # ## save models
 
-# In[20]:
+# In[ ]:
 
 
 xgb_model_views.save_model(os.path.join(DIR_MODELS, 'xgb_views.json'), 
@@ -366,7 +366,7 @@ xgb_model_frp.save_model(os.path.join(DIR_MODELS, 'xgb_frp.json'),
 
 # ## make predict
 
-# In[21]:
+# In[ ]:
 
 
 pred_views = xgb_model_views.predict(df_test[num_cols])
@@ -374,7 +374,7 @@ pred_depth = xgb_model_depth.predict(df_test[num_cols])
 pred_frp   = xgb_model_frp.predict(  df_test[num_cols])
 
 
-# In[22]:
+# In[ ]:
 
 
 subm = pd.DataFrame()
@@ -385,13 +385,13 @@ subm['depth'] = pred_depth
 subm['full_reads_percent'] = pred_frp
 
 
-# In[23]:
+# In[ ]:
 
 
 subm.head()
 
 
-# In[24]:
+# In[ ]:
 
 
 subm.to_csv(os.path.join(DIR_SUBM, '4_xgb_ctr_wknd.csv'), index = False)
