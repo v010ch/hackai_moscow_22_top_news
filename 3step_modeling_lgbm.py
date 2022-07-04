@@ -143,31 +143,34 @@ x_train.shape, x_val.shape, y_train.shape, y_val.shape
 #cat_cols + num_cols
 
 
-# In[ ]:
-
-
-
-
-
-# In[ ]:
-
-
-
-
-
-# In[ ]:
-
-
-
-
-
-# In[ ]:
-
-
-
-
-
 # In[12]:
+
+
+cat_cols = cat_cols + ['category']
+
+
+# In[13]:
+
+
+x_train['category'] = x_train['category'].astype('category')
+x_val['category'] = x_val['category'].astype('category')
+
+df_test['category'] = df_test['category'].astype('category')
+
+
+# In[ ]:
+
+
+
+
+
+# In[ ]:
+
+
+
+
+
+# In[14]:
 
 
 #lgb_train = lgb.Dataset(x_train, y_train)
@@ -225,7 +228,7 @@ dart, Dropouts meet Multiple Additive Regression Trees
 goss, Gradient-based One-Side Sampling
 # ## views
 
-# In[13]:
+# In[15]:
 
 
 # defining parameters 
@@ -241,7 +244,7 @@ params = {
 }
 
 
-# In[14]:
+# In[16]:
 
 
 # fitting the model
@@ -253,7 +256,7 @@ lgb_model_views = lgb.train(params,
                            )
 
 
-# In[15]:
+# In[17]:
 
 
 # Get predictions and metrics
@@ -272,7 +275,7 @@ train_score_views, val_score_views
 
 
 
-# In[16]:
+# In[18]:
 
 
 lgb.plot_importance(lgb_model_views, max_num_features = 30, figsize = (30, 16), importance_type = 'gain')
@@ -295,7 +298,7 @@ lgb.plot_importance(lgb_model_views, max_num_features = 30, figsize = (30, 16), 
 
 # ## depth
 
-# In[17]:
+# In[19]:
 
 
 # defining parameters 
@@ -311,7 +314,7 @@ params = {
 }
 
 
-# In[18]:
+# In[20]:
 
 
 # fitting the model
@@ -323,7 +326,7 @@ lgb_model_depth = lgb.train(params,
                            )
 
 
-# In[19]:
+# In[21]:
 
 
 # Get predictions and metrics
@@ -335,14 +338,14 @@ val_score_depth   = r2_score(y_val["depth"],   preds_val_depth)
 
 train_score_depth, val_score_depth
 
-(0.7268344081845861, 0.6434700700442351)
+(0.8835231811710682, 0.7519392810902077) emb + lag
 # In[ ]:
 
 
 
 
 
-# In[20]:
+# In[22]:
 
 
 lgb.plot_importance(lgb_model_depth, max_num_features = 30, figsize = (30, 16), importance_type = 'gain')
@@ -357,7 +360,7 @@ lgb.plot_importance(lgb_model_depth, max_num_features = 30, figsize = (30, 16), 
 
 # ## full_reads_percent
 
-# In[21]:
+# In[23]:
 
 
 # defining parameters 
@@ -373,7 +376,7 @@ params = {
 }
 
 
-# In[22]:
+# In[24]:
 
 
 # fitting the model
@@ -385,7 +388,7 @@ lgb_model_frp = lgb.train(params,
                            )
 
 
-# In[23]:
+# In[25]:
 
 
 # Get predictions and metrics
@@ -397,14 +400,14 @@ val_score_frp  = r2_score(y_val["full_reads_percent"],   preds_val_frp)
 
 train_score_frp, val_score_frp
 
-(0.30008084990246797, 0.2593834027777585)
+(0.5942299501576211, 0.3778378916210692) emb + lag
 # In[ ]:
 
 
 
 
 
-# In[24]:
+# In[26]:
 
 
 lgb.plot_importance(lgb_model_frp, max_num_features = 30, figsize = (30, 16), importance_type = 'gain')
@@ -423,7 +426,7 @@ lgb.plot_importance(lgb_model_frp, max_num_features = 30, figsize = (30, 16), im
 
 
 
-# In[ ]:
+# In[27]:
 
 
 score_train = 0.4 * train_score_views + 0.3 * train_score_depth + 0.3 * train_score_frp
@@ -438,14 +441,20 @@ score_train, score_val
 
 
 
+# In[28]:
+
+
+NTRY = 5
+
+
 # ## save models
 
-# In[ ]:
+# In[29]:
 
 
-lgb_model_views.save_model(os.path.join(DIR_MODELS, 'lgm_views.txt'), num_iteration = lgb_model_views.best_iteration)
-lgb_model_depth.save_model(os.path.join(DIR_MODELS, 'lgm_depth.txt'), num_iteration = lgb_model_depth.best_iteration)
-lgb_model_frp.save_model(  os.path.join(DIR_MODELS, 'lgm_frp.txt'),   num_iteration = lgb_model_frp.best_iteration)
+lgb_model_views.save_model(os.path.join(DIR_MODELS, f'{NTRY}_lgm_views.txt'), num_iteration = lgb_model_views.best_iteration)
+lgb_model_depth.save_model(os.path.join(DIR_MODELS, f'{NTRY}_lgm_depth.txt'), num_iteration = lgb_model_depth.best_iteration)
+lgb_model_frp.save_model(  os.path.join(DIR_MODELS, f'{NTRY}_lgm_frp.txt'),   num_iteration = lgb_model_frp.best_iteration)
 
 
 # In[ ]:
@@ -456,7 +465,7 @@ lgb_model_frp.save_model(  os.path.join(DIR_MODELS, 'lgm_frp.txt'),   num_iterat
 
 # ## make predict
 
-# In[ ]:
+# In[30]:
 
 
 pred_views = lgb_model_views.predict(df_test[cat_cols + num_cols])
@@ -464,7 +473,7 @@ pred_depth = lgb_model_depth.predict(df_test[cat_cols + num_cols])
 pred_frp   = lgb_model_frp.predict(  df_test[cat_cols + num_cols])
 
 
-# In[ ]:
+# In[31]:
 
 
 subm = pd.DataFrame()
@@ -475,16 +484,16 @@ subm['depth'] = pred_depth
 subm['full_reads_percent'] = pred_frp
 
 
-# In[ ]:
+# In[32]:
 
 
 subm.head()
 
 
-# In[ ]:
+# In[33]:
 
 
-subm.to_csv(os.path.join(DIR_SUBM, '3_lgb_ttl_emb_depth_frp.csv'), index = False)
+subm.to_csv(os.path.join(DIR_SUBM, f'{NTRY}_lgb_ttl_emb_depth_frp.csv'), index = False)
 
 
 # In[ ]:

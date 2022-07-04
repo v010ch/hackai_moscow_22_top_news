@@ -139,7 +139,7 @@ x_train.shape, x_val.shape, y_train.shape, y_val.shape
 # In[12]:
 
 
-num_cols = ['ctr']#, 'weekend']
+#num_cols = ['ctr']#, 'weekend']
 
 
 # In[ ]:
@@ -205,7 +205,7 @@ val_score_views   = r2_score(y_val["views"],   preds_val_views)
 
 train_score_views, val_score_views
 
-(0.7755792099701974, 0.8464698702781239)
+(0.7755792099701974, 0.8464698702781239) baseline
 # In[ ]:
 
 
@@ -257,7 +257,7 @@ val_score_depth   = r2_score(y_val["depth"],   preds_val_depth)
 
 train_score_depth, val_score_depth
 
-(0.2642409093370093, 0.2821371165840948)
+(0.9507037589614913, 0.7433207812829997) emb + lags
 # In[ ]:
 
 
@@ -309,7 +309,7 @@ val_score_frp   = r2_score(y_val["full_reads_percent"],   preds_val_frp)
 
 train_score_frp, val_score_frp
 
-(0.25344159292150625, 0.1951583456900532)
+(0.8800943342209755, 0.36083673682786344) emb + lags
 # In[ ]:
 
 
@@ -343,18 +343,24 @@ score_train, score_val
 
 
 
+# In[24]:
+
+
+NTRY = 5
+
+
 # ## save models
 
-# In[ ]:
+# In[25]:
 
 
-xgb_model_views.save_model(os.path.join(DIR_MODELS, 'xgb_views.json'), 
+xgb_model_views.save_model(os.path.join(DIR_MODELS, f'{NTRY}_xgb_views.json'), 
                           )
 
-xgb_model_depth.save_model(os.path.join(DIR_MODELS, 'xgb_depth.json'), 
+xgb_model_depth.save_model(os.path.join(DIR_MODELS, f'{NTRY}_xgb_depth.json'), 
                           )
 
-xgb_model_frp.save_model(os.path.join(DIR_MODELS, 'xgb_frp.json'), 
+xgb_model_frp.save_model(os.path.join(DIR_MODELS, f'{NTRY}_xgb_frp.json'), 
                         )
 
 
@@ -366,7 +372,7 @@ xgb_model_frp.save_model(os.path.join(DIR_MODELS, 'xgb_frp.json'),
 
 # ## make predict
 
-# In[ ]:
+# In[26]:
 
 
 pred_views = xgb_model_views.predict(df_test[num_cols])
@@ -374,7 +380,7 @@ pred_depth = xgb_model_depth.predict(df_test[num_cols])
 pred_frp   = xgb_model_frp.predict(  df_test[num_cols])
 
 
-# In[ ]:
+# In[27]:
 
 
 subm = pd.DataFrame()
@@ -385,16 +391,16 @@ subm['depth'] = pred_depth
 subm['full_reads_percent'] = pred_frp
 
 
-# In[ ]:
+# In[28]:
 
 
 subm.head()
 
 
-# In[ ]:
+# In[29]:
 
 
-subm.to_csv(os.path.join(DIR_SUBM, '4_xgb_ctr_wknd.csv'), index = False)
+subm.to_csv(os.path.join(DIR_SUBM, f'{NTRY}_xgb_lags_emb.csv'), index = False)
 
 
 # In[ ]:

@@ -149,7 +149,7 @@ def plot_corrc(inp_df, inp_cols, targ_cols = ['views', 'depth', 'full_reads_perc
     sns.heatmap(df_train[inp_cols + targ_cols].corr(), 
     #sns.heatmap(df_train.query('c2 == 0')[inp_cols + targ_cols].corr(), 
                 annot = True, cmap= 'coolwarm', linewidths=3, linecolor='black', ax = ax[0])
-    sns.heatmap(df_train[inp_cols + targ_cols].corr(), 
+    sns.heatmap(df_train[inp_cols + targ_cols].corr(method = 'spearman'), 
     #sns.heatmap(df_train.query('c2 == 1')[inp_cols + targ_cols].corr(), 
                 annot = True, cmap= 'coolwarm', linewidths=3, linecolor='black', ax = ax[1])
 #    sns.heatmap(df_train.query('c2 == 0')[inp_cols + targ_cols].corr(method = 'spearman'), 
@@ -266,6 +266,22 @@ plot_corrc(df_train, ['views'], ['depth', 'full_reads_percent'])
 # depth из состоит 2х распределений. необходимы 2 модели.    
 # между frp и двумя головами depth наглядно имеется корреляция.
 
+# In[167]:
+
+
+df_train.full_reads_percent.nlargest(6)
+#df_train.full_reads_percent.nsmallest(10)
+
+
+# более 200 явно шум, даже если приставить, что их кодировали/преобразовывали. отбрасываем
+# 75 тоже ваыглядит шумам на фоне остальных. стоит пробовать как с ним, так и без него   
+
+# In[ ]:
+
+
+
+
+
 # In[ ]:
 
 
@@ -278,6 +294,8 @@ plot_corrc(df_train, ['views'], ['depth', 'full_reads_percent'])
 
 
 df_train['publish_date'] = pd.to_datetime(df_train['publish_date'])
+
+df_train['m_d'] = df_train['publish_date'].dt.date
 
 df_train['hour'] = df_train['publish_date'].dt.hour
 df_train['dow'] = df_train['publish_date'].dt.dayofweek
@@ -339,10 +357,106 @@ df_train[df_train.publish_date < df_test['publish_date'].min()].shape
 # в целом все даты 21 года выглядят оторванными, однако, могут находится в том же распределении, так что, вероятно, их стоит оставить.   
 # статьи из 17 и 18 гг, вероятно стоит исключить после проверки на наличия в них особенных авторов или тэгов.
 
-# In[21]:
+# In[ ]:
 
 
-#df_train[df_train.publish_date < df_test['publish_date'].min()]
+
+
+
+# In[159]:
+
+
+tmp = (df_train[df_train.publish_date > df_test['publish_date'].min()].sort_values('publish_date').groupby('m_d').agg('size'))
+fig, ax = plt.subplots(1, 1, figsize = (30, 8))
+sns.lineplot(y = tmp.values, x=tmp.keys(), ax = ax)
+
+
+# датасет хотелось бы увеличить, таких данных для добавления лагов недостаточно. однако непонятно откуда брать depth и frp   
+# виден недельный цикл
+
+# In[40]:
+
+
+#tmp = df_train[df_train.publish_date > df_test['publish_date'].min()].sort_values('publish_date').groupby('m_d').m_d.diff()
+#sns.lineplot(y = tmp.values, x=tmp.keys())
+
+
+# In[160]:
+
+
+#min_time = pd.Timestamp('2022-01-01')
+min_time = pd.Timestamp('2022-01-29')
+tmp = df_train[df_train.publish_date > min_time][['publish_date', 'm_d']].sort_values('publish_date')['m_d'].drop_duplicates().diff()
+tmp2 = df_train[df_train.publish_date > min_time][['publish_date', 'm_d']].sort_values('publish_date')['m_d'].drop_duplicates()
+
+fig, ax = plt.subplots(1, 1, figsize = (30, 8))
+sns.lineplot(x = tmp2.values, y = tmp.map(lambda x: x.days).values, ax = ax)
+
+
+# In[153]:
+
+
+tmp2.nunique(), tmp.map(lambda x: x.days).value_counts()
+
+
+# In[ ]:
+
+
+
+
+
+# In[149]:
+
+
+def plot_means(inp_df: pd.DataFrame, inp_cat: str = 'all'):
+    
+    if inp_cat != 'all':
+        tmp = inp_df[inp_df.category == inp_cat]
+    else:
+        tmp = inp_df
+        
+    tmp = (tmp.sort_values('publish_date').groupby('m_d')[['views', 'depth', 'full_reads_percent']].agg('mean'))
+    tmp.reset_index(inplace = True)
+    
+    fig, ax = plt.subplots(3, 2, figsize=(30, 20))
+    
+    sns.lineplot(x = tmp.m_d, y = tmp['views'], ax = ax[0, 0])
+    #sns.kdeplot(x = tmp.m_d, y = tmp['views'], ax = ax[0, 1])
+    sns.kdeplot(x = tmp['views'], ax = ax[0, 1], bw_adjust = 0.3)
+    
+    sns.lineplot(x = tmp.m_d, y = tmp['depth'], ax = ax[1, 0])
+    #sns.kdeplot(x = tmp.m_d, y = tmp['depth'], ax = ax[1, 1])
+    sns.kdeplot(x = tmp['depth'], ax = ax[1, 1], bw_adjust = 0.3)
+    
+    sns.lineplot(x = tmp.m_d, y = tmp['full_reads_percent'], ax = ax[2, 0])
+    #sns.kdeplot(x = tmp.m_d, y = tmp['full_reads_percent'], ax = ax[2, 1])
+    sns.kdeplot(x = tmp['full_reads_percent'], ax = ax[2, 1], bw_adjust = 0.3)
+    
+
+
+# In[150]:
+
+
+df_train.category.unique()
+
+
+# In[154]:
+
+
+#min_time = pd.Timestamp('2022-01-01')
+min_time = pd.Timestamp('2022-01-29')
+
+
+# In[157]:
+
+
+plot_means(df_train[df_train.publish_date > min_time], '5433e5decbb20f277b20eca9')
+
+
+# In[ ]:
+
+
+
 
 
 # In[ ]:
@@ -378,7 +492,7 @@ plot_hists_sns(df_train, 'mounth')
 # In[26]:
 
 
-plot_hists_sns(df_train, 'weekend')
+#plot_hists_sns(df_train, 'weekend')
 
 
 # In[ ]:
@@ -387,13 +501,13 @@ plot_hists_sns(df_train, 'weekend')
 
 
 
-# In[70]:
+# In[27]:
 
 
 plot_corrc(df_train, ['hour', 'dow', 'day', 'mounth'],['views', 'depth', 'full_reads_percent']) #'weekend', 
 
 
-# In[65]:
+# In[28]:
 
 
 df_train.columns
@@ -413,25 +527,25 @@ df_train.columns
 
 # # category
 
-# In[27]:
+# In[29]:
 
 
 df_train.category.nunique(), df_train.category.unique(), 
 
 
-# In[28]:
+# In[30]:
 
 
 plot_hists_sns(df_train, 'category')
 
 
-# In[29]:
+# In[31]:
 
 
 df_train.category.value_counts()
 
 
-# In[30]:
+# In[32]:
 
 
 df_test.category.value_counts()
@@ -439,16 +553,16 @@ df_test.category.value_counts()
 
 # вероятно стоит удалить последние 3 категории, что бы модель не переобучалась на них. к тому же их нет в тесте
 
-# In[31]:
+# In[33]:
 
 
 exclude_category = {'5e54e2089a7947f63a801742', '552e430f9a79475dd957f8b3', '5e54e22a9a7947f560081ea2' }
 
 
-# In[32]:
+# In[35]:
 
 
-plot_hists_sns(df_train.query('category in @exclude_category'), 'category')
+#plot_hists_sns(df_train.query('category in @exclude_category'), 'category')
 
 
 # In[ ]:
@@ -477,7 +591,7 @@ plot_hists_sns(df_train.query('category in @exclude_category'), 'category')
 
 # ## authors
 
-# In[33]:
+# In[ ]:
 
 
 df_train['authors']  = df_train.authors.apply(lambda x: literal_eval(x))
@@ -487,13 +601,13 @@ df_test['authors']  = df_test.authors.apply(lambda x: literal_eval(x))
 df_test['Nauthors'] = df_test.authors.apply(lambda x: len(x))
 
 
-# In[34]:
+# In[ ]:
 
 
 df_train['Nauthors'].value_counts()
 
 
-# In[35]:
+# In[ ]:
 
 
 df_test['Nauthors'].value_counts()
@@ -502,31 +616,31 @@ df_test['Nauthors'].value_counts()
 # удивительно, что возможные значения количества авторов в трейне и тесте совпадают. можно использовать как признак  
 # однако значения при > 3 малы, что может привести к переобучению
 
-# In[36]:
+# In[ ]:
 
 
 plot_hists_sns(df_train, 'Nauthors')
 
 
-# In[37]:
+# In[ ]:
 
 
 df_train['Nauthors_upd'] = df_train['Nauthors'].apply(lambda x: x if x < 4 else 4) # 3
 
 
-# In[38]:
+# In[ ]:
 
 
 df_train['Nauthors_upd'].value_counts()
 
 
-# In[39]:
+# In[ ]:
 
 
 plot_hists_sns(df_train, 'Nauthors_upd')
 
 
-# In[40]:
+# In[ ]:
 
 
 all_authors = set()
@@ -541,13 +655,13 @@ for el in df_train.authors.values:
         all_authors.add(author)
 
 
-# In[41]:
+# In[ ]:
 
 
 len(all_authors)
 
 
-# In[42]:
+# In[ ]:
 
 
 all_authors_test = set()
@@ -562,13 +676,13 @@ for el in df_test.authors.values:
         all_authors_test.add(author)
 
 
-# In[43]:
+# In[ ]:
 
 
 len(all_authors_test)
 
 
-# In[44]:
+# In[ ]:
 
 
 missed_authors = set()
@@ -577,7 +691,7 @@ for el in all_authors_test:
         missed_authors.add(el)
 
 
-# In[45]:
+# In[ ]:
 
 
 len(missed_authors)
@@ -585,7 +699,7 @@ len(missed_authors)
 
 # только 2 (2%) автора не представленны в обучающей выборке
 
-# In[67]:
+# In[ ]:
 
 
 plot_corrc(df_train, ['Nauthors'], ['views', 'depth', 'full_reads_percent'])
@@ -605,7 +719,7 @@ plot_corrc(df_train, ['Nauthors'], ['views', 'depth', 'full_reads_percent'])
 
 # ## tags
 
-# In[46]:
+# In[ ]:
 
 
 df_train['tags']  = df_train.tags.apply(lambda x: literal_eval(x))
@@ -615,13 +729,13 @@ df_test['tags']  = df_test.tags.apply(lambda x: literal_eval(x))
 df_test['Ntags'] = df_test.tags.apply(lambda x: len(x))
 
 
-# In[47]:
+# In[ ]:
 
 
 df_train.Ntags.value_counts()
 
 
-# In[48]:
+# In[ ]:
 
 
 df_test.Ntags.value_counts()
@@ -629,7 +743,7 @@ df_test.Ntags.value_counts()
 
 # в тест есть статьи с большим количеством тэгов чем в трейне. хоть их количество и мало
 
-# In[49]:
+# In[ ]:
 
 
 plot_hists_sns(df_train, 'Ntags')
@@ -641,7 +755,7 @@ plot_hists_sns(df_train, 'Ntags')
 
 
 
-# In[50]:
+# In[ ]:
 
 
 all_tags = set()
@@ -656,13 +770,13 @@ for el in df_train.tags.values:
         all_tags.add(tag)
 
 
-# In[51]:
+# In[ ]:
 
 
 len(all_tags)
 
 
-# In[52]:
+# In[ ]:
 
 
 all_tags_test = set()
@@ -677,13 +791,13 @@ for el in df_test.tags.values:
         all_tags_test.add(tag)
 
 
-# In[53]:
+# In[ ]:
 
 
 len(all_tags_test)
 
 
-# In[54]:
+# In[ ]:
 
 
 missed_tags = set()
@@ -692,7 +806,7 @@ for el in all_tags_test:
         missed_tags.add(el)
 
 
-# In[55]:
+# In[ ]:
 
 
 len(missed_tags)
@@ -714,19 +828,19 @@ len(missed_tags)
 
 # ## ctr
 
-# In[56]:
+# In[ ]:
 
 
 df_train.hist('ctr', bins = 40, figsize=(24, 8))
 
 
-# In[57]:
+# In[ ]:
 
 
 df_train.ctr.min(), df_train.ctr.max()
 
 
-# In[66]:
+# In[ ]:
 
 
 plot_corrc(df_train, ['ctr'], ['views', 'depth', 'full_reads_percent'])
@@ -762,13 +876,13 @@ plot_corrc(df_train, ['ctr'], ['views', 'depth', 'full_reads_percent'])
 
 
 
-# In[58]:
+# In[ ]:
 
 
 df_train.columns
 
 
-# In[59]:
+# In[ ]:
 
 
 
@@ -784,7 +898,7 @@ df_train.columns
 
 # ## Correlation
 
-# In[60]:
+# In[ ]:
 
 
 num_cols = ['views', 'depth', 'full_reads_percent', 
@@ -795,21 +909,21 @@ num_cols = ['views', 'depth', 'full_reads_percent',
            ]
 
 
-# In[61]:
+# In[ ]:
 
 
 f, ax = plt.subplots(figsize=(30, 16))
 ax = sns.heatmap(df_train[num_cols].corr(), annot = True, cmap= 'coolwarm', linewidths=3, linecolor='black',)
 
 
-# In[62]:
+# In[ ]:
 
 
 f, ax = plt.subplots(figsize=(30, 16))
 ax = sns.heatmap(df_train[num_cols].corr(method='spearman'), annot = True, cmap= 'coolwarm', linewidths=3, linecolor='black')
 
 
-# In[63]:
+# In[ ]:
 
 
 sns.pairplot(df_train[num_cols])
