@@ -859,6 +859,7 @@ df_test.shape
 # In[61]:
 
 
+df_train.to_csv(os.path.join( DIR_DATA, 'train_upd.csv'))
 x_train.to_csv(os.path.join(DIR_DATA,  'x_train.csv'))
 x_val.to_csv(os.path.join(DIR_DATA,    'x_val.csv'))
 df_test.to_csv(os.path.join( DIR_DATA, 'test_upd.csv'))

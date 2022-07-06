@@ -3,12 +3,13 @@
 
 # ## Загрузим нужные библиотеки
 
-# In[1]:
+# In[54]:
 
 
 import os
 import numpy as np
 import pandas as pd
+import re
 
 from ast import literal_eval
 
@@ -183,13 +184,13 @@ DIR_SUBM  = os.path.join(os.getcwd(), 'subm')
 
 
 
-# In[7]:
+# In[20]:
 
 
 #df_train = pd.read_csv(os.path.join(DIR_DATA, 'train.csv'), index_col= 0)
-df_train = pd.read_csv(os.path.join(DIR_DATA, 'train_depth_classes.csv'), index_col= 0)
+df_train = pd.read_csv(os.path.join(DIR_DATA, 'train_depth_classes.csv'))#, index_col= 0)
 
-df_test = pd.read_csv(os.path.join(DIR_DATA, 'test.csv'), index_col= 0)
+df_test = pd.read_csv(os.path.join(DIR_DATA, 'test.csv'))#, index_col= 0)
 
 
 # In[ ]:
@@ -565,22 +566,134 @@ exclude_category = {'5e54e2089a7947f63a801742', '552e430f9a79475dd957f8b3', '5e5
 #plot_hists_sns(df_train.query('category in @exclude_category'), 'category')
 
 
+# In[47]:
+
+
+df_train[df_train.category == '5e54e22a9a7947f560081ea2'][['document_id', 'publish_date', 'title']]#.sample(5)
+
+5409f11ce063da9c8b588a12    Политика / rbcfreenews
+5433e5decbb20f277b20eca9    photoreport / society / 
+540d5eafcbb20f2524fc0509    business
+5409f11ce063da9c8b588a13    economics
+540d5ecacbb20f2524fc050a    technology_and_media
+5409f11ce063da9c8b588a18    finances
+
+
+5e54e2089a7947f63a801742    rbcfreenews / politics
+552e430f9a79475dd957f8b3    money?????????????????
+5e54e22a9a7947f560081ea2    realty / city?
+# In[ ]:
+
+
+cat_decode = {'5409f11ce063da9c8b588a12': {'name': 'politics',
+                                           'link': 'politics',
+                                           'last_work': 'Политика',
+                                           }
+              
+    
+}
+
+
+# In[48]:
+
+
+df_train.iloc[4297].title
+
+
+# In[ ]:
+
+
+# 'Захарова предложила Евросоюзу «отменить себя»\n                \n                                                    \n\n    \n\n    Политика,\xa012:28'
+
+5409f11ce063da9c8b588a12
+
+648
+https://www.rbc.ru/politics/22/03/2022/623a42f49a7947092e9f8a6byyO-cdUwQK2SyNATEJw4Hg
+https://www.rbc.ru/rbcfreenews/623a42f49a7947092e9f8a6b
+
+1511
+624463cd9a79476ed1dfc869E_KUrdstQmmg6BC2cXKeQw
+https://www.rbc.ru/politics/30/03/2022/624463cd9a79476ed1dfc869
+
+1808
+620d619f9a7947376b27bfa4Inynzi57Rha5kH_bTmf7rg
+https://www.rbc.ru/rbcfreenews/620d619f9a7947376b27bfa45433e5decbb20f277b20eca9
+
+1868
+623326679a794756b8f2a9689gvGuGVAQdSks_mvJUPH0g
+https://www.rbc.ru/photoreport/26/03/2022/623326679a794756b8f2a968
+
+2270
+628f46d79a7947a590484e1fCdVz8DVMScWTjWmc-egG6Q
+https://www.rbc.ru/society/26/05/2022/628f46d79a7947a590484e1f    
+
+2320
+620099d69a794755aba55d7ay3GfLOkyT0udO4mpPvGtpg
+https://www.rbc.ru/society/07/02/2022/620099d69a794755aba55d7a
+    
+176
+6244c29b9a79478f9a339bca0RwqdNMOSfeAefxAr_8Wwg
+https://www.rbc.ru/society/31/03/2022/6244c29b9a79478f9a339bca
 # In[ ]:
 
 
 
 
 
+# In[106]:
+
+
+#clean_text = lambda x:' '.join(re.sub('\n|\r|\t|[^а-я]', ' ', x.lower()).split())
+clean_text = lambda x:' '.join(re.sub('\n|\r|\t|[^а-яА-ЯA-zA-Z]', ' ', x).split())
+
+
+# In[107]:
+
+
+tmp_ttl = 'Захарова предложила Евросоюзу «отменить себя»\n                \n                                                    \n\n    \n\n    Политика,\xa012:28'
+
+
+# In[108]:
+
+
+len(clean_text(tmp_ttl)), len(tmp_ttl)
+
+
+# In[109]:
+
+
+df_train['title_len_diff'] = df_train.title.apply(lambda x: len(x) - len(clean_text(x)))
+df_test['title_len_diff']  = df_test.title.apply(lambda x: len(x) - len(clean_text(x)))
+
+
+# In[110]:
+
+
+df_train[df_train.title_len_diff > 50].title.sample(10).values
+
+
+# In[77]:
+
+
+# 'Власти Москвы рассказали о ходе работ на Рублево-Архангельской линии\n                \n                                                    \n\n    \n\n    Город,\xa012:03',
+
+
+# In[ ]:
+
+
+Политика, Технологии и медиа, Экономика, Общество, Бизнес, ????Финансы
+
+
 # In[ ]:
 
 
 
 
 
-# In[ ]:
+# In[125]:
 
 
-
+df_test[df_test.title_len_diff > 50].title.sample(10).values
 
 
 # In[ ]:
