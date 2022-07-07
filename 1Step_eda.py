@@ -3,7 +3,7 @@
 
 # ## Загрузим нужные библиотеки
 
-# In[54]:
+# In[1]:
 
 
 import os
@@ -184,7 +184,7 @@ DIR_SUBM  = os.path.join(os.getcwd(), 'subm')
 
 
 
-# In[20]:
+# In[7]:
 
 
 #df_train = pd.read_csv(os.path.join(DIR_DATA, 'train.csv'), index_col= 0)
@@ -704,7 +704,7 @@ df_test[df_test.title_len_diff > 50].title.sample(10).values
 
 # ## authors
 
-# In[ ]:
+# In[17]:
 
 
 df_train['authors']  = df_train.authors.apply(lambda x: literal_eval(x))
@@ -714,13 +714,13 @@ df_test['authors']  = df_test.authors.apply(lambda x: literal_eval(x))
 df_test['Nauthors'] = df_test.authors.apply(lambda x: len(x))
 
 
-# In[ ]:
+# In[18]:
 
 
 df_train['Nauthors'].value_counts()
 
 
-# In[ ]:
+# In[19]:
 
 
 df_test['Nauthors'].value_counts()
@@ -729,31 +729,31 @@ df_test['Nauthors'].value_counts()
 # удивительно, что возможные значения количества авторов в трейне и тесте совпадают. можно использовать как признак  
 # однако значения при > 3 малы, что может привести к переобучению
 
-# In[ ]:
+# In[20]:
 
 
 plot_hists_sns(df_train, 'Nauthors')
 
 
-# In[ ]:
+# In[21]:
 
 
 df_train['Nauthors_upd'] = df_train['Nauthors'].apply(lambda x: x if x < 4 else 4) # 3
 
 
-# In[ ]:
+# In[22]:
 
 
 df_train['Nauthors_upd'].value_counts()
 
 
-# In[ ]:
+# In[23]:
 
 
 plot_hists_sns(df_train, 'Nauthors_upd')
 
 
-# In[ ]:
+# In[24]:
 
 
 all_authors = set()
@@ -768,13 +768,13 @@ for el in df_train.authors.values:
         all_authors.add(author)
 
 
-# In[ ]:
+# In[25]:
 
 
 len(all_authors)
 
 
-# In[ ]:
+# In[26]:
 
 
 all_authors_test = set()
@@ -789,13 +789,13 @@ for el in df_test.authors.values:
         all_authors_test.add(author)
 
 
-# In[ ]:
+# In[27]:
 
 
 len(all_authors_test)
 
 
-# In[ ]:
+# In[28]:
 
 
 missed_authors = set()
@@ -804,7 +804,7 @@ for el in all_authors_test:
         missed_authors.add(el)
 
 
-# In[ ]:
+# In[29]:
 
 
 len(missed_authors)
@@ -812,7 +812,7 @@ len(missed_authors)
 
 # только 2 (2%) автора не представленны в обучающей выборке
 
-# In[ ]:
+# In[30]:
 
 
 plot_corrc(df_train, ['Nauthors'], ['views', 'depth', 'full_reads_percent'])
@@ -941,28 +941,28 @@ len(missed_tags)
 
 # ## ctr
 
-# In[ ]:
+# In[12]:
 
 
 df_train.hist('ctr', bins = 40, figsize=(24, 8))
 
 
-# In[ ]:
+# In[13]:
 
 
 df_train.ctr.min(), df_train.ctr.max()
 
 
-# In[ ]:
+# In[14]:
 
 
 plot_corrc(df_train, ['ctr'], ['views', 'depth', 'full_reads_percent'])
 
 
-# In[ ]:
+# In[16]:
 
 
-
+#plot_hists_sns(df_train, 'ctr')
 
 
 # In[ ]:

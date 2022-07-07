@@ -309,7 +309,7 @@ val_score_frp   = r2_score(y_val["full_reads_percent"],   preds_val_frp)
 
 train_score_frp, val_score_frp
 
-(0.8800943342209755, 0.36083673682786344) emb + lags
+(0.8743266355474598, 0.37379638051659225) emb + lags + nauth + all_norm
 # In[ ]:
 
 
@@ -346,7 +346,7 @@ score_train, score_val
 # In[24]:
 
 
-NTRY = 5
+NTRY = 6
 
 
 # ## save models
@@ -384,7 +384,7 @@ pred_frp   = xgb_model_frp.predict(  df_test[num_cols])
 
 
 subm = pd.DataFrame()
-subm['document_id'] = df_test.index
+subm['document_id'] = df_test.document_id
 
 subm['views'] = pred_views
 subm['depth'] = pred_depth

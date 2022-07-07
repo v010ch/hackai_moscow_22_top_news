@@ -33,8 +33,8 @@ DIR_SUBM   = os.path.join(os.getcwd(), 'subm')
 
 
 subm_views = pd.read_csv(os.path.join(DIR_SUBM, '1_xgb_baseline_test.csv'),     usecols=['document_id', 'views'])
-subm_depth = pd.read_csv(os.path.join(DIR_SUBM, '5_lgb_ttl_emb_depth_frp.csv'), usecols=['document_id', 'depth'])
-subm_frp   = pd.read_csv(os.path.join(DIR_SUBM, '5_lgb_ttl_emb_depth_frp.csv'), usecols=['document_id', 'full_reads_percent'])
+subm_depth = pd.read_csv(os.path.join(DIR_SUBM, '6_xgb_lags_emb.csv'), usecols=['document_id', 'depth'])
+subm_frp   = pd.read_csv(os.path.join(DIR_SUBM, '6_lgb_ttl_emb_depth_frp.csv'), usecols=['document_id', 'full_reads_percent'])
 print(subm_views.shape, subm_depth.shape, subm_frp.shape)
 
 
@@ -55,7 +55,7 @@ subm = subm.merge(subm_frp, on='document_id', validate='one_to_one')
 # In[5]:
 
 
-NTYPE = 5
+NTYPE = 6
 
 
 # In[6]:

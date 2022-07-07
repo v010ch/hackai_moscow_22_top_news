@@ -335,7 +335,7 @@ val_score_depth   = r2_score(y_val["depth"],   preds_val_depth)
 
 train_score_depth, val_score_depth
 
-(0.8528653999306899, 0.7262589281971181) emb + lags
+(0.8493920704127192, 0.7508125364228887) emb + lags + nauth + all_norm
 # In[ ]:
 
 
@@ -415,17 +415,17 @@ score_val  = 0.4 * val_score_views  + 0.3 * val_score_depth  + 0.3 * val_score_f
 
 score_train, score_val
 
-(0.46673042900461154, 0.43034861641062294)
+(0.6661157519992797, 0.48755208933038424)  emb + lags + nauth + all_norm
 # In[ ]:
 
 
 
 
 
-# In[27]:
+# In[28]:
 
 
-NTRY = 5
+NTRY = 6
 
 
 # ## save models
@@ -436,7 +436,7 @@ NTRY = 5
 
 
 
-# In[28]:
+# In[29]:
 
 
 cb_model_views.save_model(os.path.join(DIR_MODELS, f'{NTRY}_cb_views.cbm'), 
@@ -466,7 +466,7 @@ cb_model_frp.save_model(os.path.join(DIR_MODELS, f'{NTRY}_cb_frp.cbm'),
 
 # ## make predict
 
-# In[29]:
+# In[30]:
 
 
 pred_views = cb_model_views.predict(df_test[cat_cols + num_cols])
@@ -474,7 +474,7 @@ pred_depth = cb_model_depth.predict(df_test[cat_cols + num_cols])
 pred_frp   = cb_model_frp.predict(  df_test[cat_cols + num_cols])
 
 
-# In[30]:
+# In[31]:
 
 
 subm = pd.DataFrame()
@@ -485,13 +485,13 @@ subm['depth'] = pred_depth
 subm['full_reads_percent'] = pred_frp
 
 
-# In[31]:
+# In[32]:
 
 
 subm.head()
 
 
-# In[32]:
+# In[33]:
 
 
 subm.to_csv(os.path.join(DIR_SUBM, f'{NTRY}_cb_ttls_emd_lags.csv'), index = False)
