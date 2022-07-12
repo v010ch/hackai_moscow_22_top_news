@@ -24,6 +24,7 @@ import pandas as pd
 
 from xgboost import XGBRegressor
 from sklearn.metrics import r2_score
+from sklearn import preprocessing
 
 
 # In[4]:
@@ -281,6 +282,26 @@ plot_importance(xgb_model_depth, 30, 'weight')
 # In[20]:
 
 
+#pd.DataFrame(preds_train_depth, columns = ['depth_pred'])
+pred_scaler = preprocessing.StandardScaler()
+tmp = pred_scaler.fit_transform(preds_train_depth.reshape(-1, 1))
+pred_depth_train = pd.DataFrame(tmp, columns = ['depth_pred'])
+
+pred_depth_val   = pd.DataFrame(pred_scaler.transform(preds_val_depth.reshape(-1, 1)), columns = ['depth_pred'])
+
+
+# In[22]:
+
+
+print('before ', x_train.shape, x_val.shape, preds_train_depth.shape, preds_val_depth.shape)
+x_train = pd.concat([x_train, pred_depth_train], axis = 1)
+x_val   = pd.concat([x_val,   pred_depth_val],   axis = 1)
+print('after  ', x_train.shape, x_val.shape)
+
+
+# In[21]:
+
+
 xgb_model_frp = XGBRegressor(n_estimators=1000, 
                              max_depth=7, 
                              eta=0.1, 
@@ -290,14 +311,17 @@ xgb_model_frp = XGBRegressor(n_estimators=1000,
                              random_state = XGB_RANDOMSEED,
                              )
 
-xgb_model_frp.fit(x_train[num_cols], y_train['full_reads_percent'], 
+xgb_model_frp.fit(x_train[num_cols], 
+                  y_train['full_reads_percent'], 
                   early_stopping_rounds=5,
-                  eval_set=[(x_val[num_cols], y_val['full_reads_percent'])], 
+                  eval_set=[(x_val[num_cols], 
+                             y_val['full_reads_percent'])
+                           ], 
                   verbose=False
                  )
 
 
-# In[21]:
+# In[ ]:
 
 
 # Get predictions and metrics
@@ -316,7 +340,7 @@ train_score_frp, val_score_frp
 
 
 
-# In[22]:
+# In[ ]:
 
 
 plot_importance(xgb_model_frp, 30, 'weight')
@@ -328,7 +352,7 @@ plot_importance(xgb_model_frp, 30, 'weight')
 
 
 
-# In[23]:
+# In[ ]:
 
 
 score_train = 0.4 * train_score_views + 0.3 * train_score_depth + 0.3 * train_score_frp
@@ -343,7 +367,7 @@ score_train, score_val
 
 
 
-# In[24]:
+# In[ ]:
 
 
 NTRY = 6
@@ -351,16 +375,16 @@ NTRY = 6
 
 # ## save models
 
-# In[25]:
+# In[ ]:
 
 
-xgb_model_views.save_model(os.path.join(DIR_MODELS, f'{NTRY}_xgb_views.json'), 
+xgb_model_views.save_model(os.path.join(DIR_MODELS, f'{NTRY}_1_xgb_views.json'), 
                           )
 
-xgb_model_depth.save_model(os.path.join(DIR_MODELS, f'{NTRY}_xgb_depth.json'), 
+xgb_model_depth.save_model(os.path.join(DIR_MODELS, f'{NTRY}_1_xgb_depth.json'), 
                           )
 
-xgb_model_frp.save_model(os.path.join(DIR_MODELS, f'{NTRY}_xgb_frp.json'), 
+xgb_model_frp.save_model(os.path.join(DIR_MODELS, f'{NTRY}_1_xgb_frp.json'), 
                         )
 
 
@@ -372,7 +396,7 @@ xgb_model_frp.save_model(os.path.join(DIR_MODELS, f'{NTRY}_xgb_frp.json'),
 
 # ## make predict
 
-# In[26]:
+# In[ ]:
 
 
 pred_views = xgb_model_views.predict(df_test[num_cols])
@@ -380,7 +404,7 @@ pred_depth = xgb_model_depth.predict(df_test[num_cols])
 pred_frp   = xgb_model_frp.predict(  df_test[num_cols])
 
 
-# In[27]:
+# In[ ]:
 
 
 subm = pd.DataFrame()
@@ -391,16 +415,16 @@ subm['depth'] = pred_depth
 subm['full_reads_percent'] = pred_frp
 
 
-# In[28]:
+# In[ ]:
 
 
 subm.head()
 
 
-# In[29]:
+# In[ ]:
 
 
-subm.to_csv(os.path.join(DIR_SUBM, f'{NTRY}_xgb_lags_emb.csv'), index = False)
+subm.to_csv(os.path.join(DIR_SUBM, f'{NTRY}_1_xgb_lags_emb_dp.csv'), index = False)
 
 
 # In[ ]:

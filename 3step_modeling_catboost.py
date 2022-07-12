@@ -23,6 +23,7 @@ import numpy as np
 import pandas as pd
 
 from sklearn.metrics import r2_score
+from sklearn import preprocessing
 from catboost import CatBoostRegressor, Pool
 
 import matplotlib.pyplot as plt
@@ -191,17 +192,7 @@ val_ds_depth   = Pool(x_val[cat_cols + num_cols],
 
 
 #full_reads_percent
-train_ds_frp = Pool(x_train[cat_cols + num_cols],
-                      y_train[['full_reads_percent']],
-                      cat_features = cat_cols,
-                      feature_names = cat_cols + num_cols
-                     )
-
-val_ds_frp   = Pool(x_val[cat_cols + num_cols],
-                      y_val[['full_reads_percent']],
-                      cat_features = cat_cols,
-                      feature_names = cat_cols + num_cols
-                     )
+#у frp корреляция с depth. так что добавим признак deprh_pred и соберем датасет уже после предсказания depth
 
 
 # In[ ]:
@@ -336,13 +327,13 @@ val_score_depth   = r2_score(y_val["depth"],   preds_val_depth)
 train_score_depth, val_score_depth
 
 (0.8493920704127192, 0.7508125364228887) emb + lags + nauth + all_norm
-# In[ ]:
-
-
-
-
-
 # In[22]:
+
+
+x_train.shape
+
+
+# In[23]:
 
 
 #plot_feature_importance(cb_model_views, train_ds_views, 30)
@@ -357,7 +348,55 @@ plot_feature_importance(cb_model_depth.get_feature_importance(), train_ds_depth.
 
 # ## full_reads_percent
 
-# In[23]:
+# In[24]:
+
+
+#pd.DataFrame(preds_train_depth, columns = ['depth_pred'])
+pred_scaler = preprocessing.StandardScaler()
+tmp = pred_scaler.fit_transform(preds_train_depth.reshape(-1, 1))
+pred_depth_train = pd.DataFrame(tmp, columns = ['depth_pred'])
+
+pred_depth_val   = pd.DataFrame(pred_scaler.transform(preds_val_depth.reshape(-1, 1)), columns = ['depth_pred'])
+
+
+# In[ ]:
+
+
+
+
+
+# In[25]:
+
+
+print('before ', x_train.shape, x_val.shape, preds_train_depth.shape, preds_val_depth.shape)
+x_train = pd.concat([x_train, pred_depth_train], axis = 1)
+x_val   = pd.concat([x_val,   pred_depth_val],   axis = 1)
+print('after  ', x_train.shape, x_val.shape)
+
+
+# In[ ]:
+
+
+
+
+
+# In[26]:
+
+
+train_ds_frp = Pool(x_train[cat_cols + num_cols + ['depth_pred']],
+                      y_train[['full_reads_percent']],
+                      cat_features = cat_cols,
+                      feature_names = cat_cols + num_cols + ['depth_pred'],
+                     )
+
+val_ds_frp   = Pool(x_val[cat_cols + num_cols + ['depth_pred']],
+                      y_val[['full_reads_percent']],
+                      cat_features = cat_cols,
+                      feature_names = cat_cols + num_cols + ['depth_pred'],
+                     )
+
+
+# In[ ]:
 
 
 cb_model_frp = CatBoostRegressor(#iterations=1000,
@@ -375,7 +414,7 @@ cb_model_frp.fit(train_ds_frp,
                   )
 
 
-# In[24]:
+# In[ ]:
 
 
 # Get predictions and metrics
@@ -394,7 +433,7 @@ train_score_frp, val_score_frp
 
 
 
-# In[25]:
+# In[26]:
 
 
 #plot_feature_importance(cb_model_views, train_ds_views, 30)
@@ -422,7 +461,7 @@ score_train, score_val
 
 
 
-# In[28]:
+# In[27]:
 
 
 NTRY = 6
@@ -436,22 +475,22 @@ NTRY = 6
 
 
 
-# In[29]:
+# In[28]:
 
 
-cb_model_views.save_model(os.path.join(DIR_MODELS, f'{NTRY}_cb_views.cbm'), 
+cb_model_views.save_model(os.path.join(DIR_MODELS, f'{NTRY}_1_cb_views.cbm'), 
                            format="cbm",
                            export_parameters=None,
                            pool=None
                          )
 
-cb_model_depth.save_model(os.path.join(DIR_MODELS, f'{NTRY}_cb_depth.cbm'), 
+cb_model_depth.save_model(os.path.join(DIR_MODELS, f'{NTRY}_1_cb_depth.cbm'), 
                            format="cbm",
                            export_parameters=None,
                            pool=None
                          )
 
-cb_model_frp.save_model(os.path.join(DIR_MODELS, f'{NTRY}_cb_frp.cbm'), 
+cb_model_frp.save_model(os.path.join(DIR_MODELS, f'{NTRY}_1_cb_frp.cbm'), 
                            format="cbm",
                            export_parameters=None,
                            pool=None
@@ -466,7 +505,7 @@ cb_model_frp.save_model(os.path.join(DIR_MODELS, f'{NTRY}_cb_frp.cbm'),
 
 # ## make predict
 
-# In[30]:
+# In[33]:
 
 
 pred_views = cb_model_views.predict(df_test[cat_cols + num_cols])
@@ -474,7 +513,7 @@ pred_depth = cb_model_depth.predict(df_test[cat_cols + num_cols])
 pred_frp   = cb_model_frp.predict(  df_test[cat_cols + num_cols])
 
 
-# In[31]:
+# In[34]:
 
 
 subm = pd.DataFrame()
@@ -485,16 +524,22 @@ subm['depth'] = pred_depth
 subm['full_reads_percent'] = pred_frp
 
 
-# In[32]:
+# In[35]:
 
 
 subm.head()
 
 
-# In[33]:
+# In[37]:
 
 
-subm.to_csv(os.path.join(DIR_SUBM, f'{NTRY}_cb_ttls_emd_lags.csv'), index = False)
+subm.to_csv(os.path.join(DIR_SUBM, f'{NTRY}_1_cb_ttls_emd_lags_dp.csv'), index = False)
+
+
+# In[ ]:
+
+
+
 
 
 # In[ ]:

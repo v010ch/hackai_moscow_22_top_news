@@ -841,7 +841,7 @@ df_test[num_cols]  = scaler.transform(df_test[num_cols])
 # DeepPavlov/rubert-base-cased            768
 # sberbank-ai/sbert_large_nlu_ru          1024  1.71Gb
 
-MODEL_FOLDER = 'sbert_large_mt_nlu_ru'
+MODEL_FOLDER = 'rubert-base-cased-sentence'
 MAX_LENGTH = 24
 
 def add_ttle_embeding(inp_df: pd.DataFrame) -> pd.DataFrame:

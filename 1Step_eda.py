@@ -528,25 +528,25 @@ df_train.columns
 
 # # category
 
-# In[29]:
+# In[12]:
 
 
 df_train.category.nunique(), df_train.category.unique(), 
 
 
-# In[30]:
+# In[13]:
 
 
 plot_hists_sns(df_train, 'category')
 
 
-# In[31]:
+# In[14]:
 
 
 df_train.category.value_counts()
 
 
-# In[32]:
+# In[15]:
 
 
 df_test.category.value_counts()
@@ -554,19 +554,68 @@ df_test.category.value_counts()
 
 # вероятно стоит удалить последние 3 категории, что бы модель не переобучалась на них. к тому же их нет в тесте
 
-# In[33]:
+# In[16]:
 
 
 exclude_category = {'5e54e2089a7947f63a801742', '552e430f9a79475dd957f8b3', '5e54e22a9a7947f560081ea2' }
-
-
-# In[35]:
-
-
 #plot_hists_sns(df_train.query('category in @exclude_category'), 'category')
 
 
-# In[47]:
+# In[17]:
+
+
+category_decode = {
+    '5409f11ce063da9c8b588a12':{'name': 'Политика',      # / rbcfreenews
+                                'link': 'politics',      # слово в ссылкена рбк
+                                'last_word': 'Политика', # возможное последнее слово в title
+                                                         # при наличии ошибки
+                                },
+    '5433e5decbb20f277b20eca9':{'name': 'Общество',      # / photoreport
+                                'link': 'society',       # слово в ссылкена рбк
+                                'last_word': 'Общество', # возможное последнее слово в title
+                                                         # при наличии ошибки
+                                },
+    '540d5eafcbb20f2524fc0509':{'name': 'Бизнес',        # / rbcfreenews
+                                'link': 'business',      # слово в ссылкена рбк
+                                'last_word': 'Бизнес',   # возможное последнее слово в title
+                                                         # при наличии ошибки
+                                },
+    '5409f11ce063da9c8b588a13':{'name': 'Экономка',      # / rbcfreenews
+                                'link': 'economics',     # слово в ссылкена рбк
+                                'last_word': 'Экономика', # возможное последнее слово в title
+                                                         # при наличии ошибки
+                                },
+    '540d5ecacbb20f2524fc050a':{'name': 'Технологии и медия',# / rbcfreenews
+                                'link': 'technology_and_media',      # слово в ссылкена рбк
+                                'last_word': 'медиа',    # возможное последнее слово в title
+                                                         # при наличии ошибки
+                                },
+    '5409f11ce063da9c8b588a18':{'name': 'Финансы',       # / rbcfreenews
+                                'link': 'finances',      # слово вссылкена рбк
+                                'last_word': 'Финансы',  # возможное последнее слово в title
+                                                         # при наличии ошибки
+                                },   
+
+## DELETED????
+        '5e54e2089a7947f63a801742':{'name': 'Политика',  # / rbcfreenews
+                                'link': 'politics',      # слово вссылкена рбк
+                                'last_word': 'Политика', # возможное последнее слово в title
+                                                         # при наличии ошибки
+                                },  
+        '552e430f9a79475dd957f8b3':{'name': 'Деньги',    # / rbcfreenews
+                                'link': 'money',         # слово вссылкена рбк
+                                'last_word': 'Деньги',   # возможное последнее слово в title
+                                                         # при наличии ошибки
+                                },  
+        '5e54e22a9a7947f560081ea2':{'name': 'Недвижимость',# / city
+                                'link': 'realty',          # слово вссылкена рбк
+                                'last_word': 'Недвижимость',  # возможное последнее слово в title
+                                                           # при наличии ошибки
+                                },  
+}
+
+
+# In[18]:
 
 
 df_train[df_train.category == '5e54e22a9a7947f560081ea2'][['document_id', 'publish_date', 'title']]#.sample(5)
@@ -582,25 +631,13 @@ df_train[df_train.category == '5e54e22a9a7947f560081ea2'][['document_id', 'publi
 5e54e2089a7947f63a801742    rbcfreenews / politics
 552e430f9a79475dd957f8b3    money?????????????????
 5e54e22a9a7947f560081ea2    realty / city?
-# In[ ]:
-
-
-cat_decode = {'5409f11ce063da9c8b588a12': {'name': 'politics',
-                                           'link': 'politics',
-                                           'last_work': 'Политика',
-                                           }
-              
-    
-}
-
-
-# In[48]:
+# In[19]:
 
 
 df_train.iloc[4297].title
 
 
-# In[ ]:
+# In[20]:
 
 
 # 'Захарова предложила Евросоюзу «отменить себя»\n                \n                                                    \n\n    \n\n    Политика,\xa012:28'
@@ -640,30 +677,86 @@ https://www.rbc.ru/society/31/03/2022/6244c29b9a79478f9a339bca
 
 
 
-# In[106]:
+# In[21]:
 
 
 #clean_text = lambda x:' '.join(re.sub('\n|\r|\t|[^а-я]', ' ', x.lower()).split())
 clean_text = lambda x:' '.join(re.sub('\n|\r|\t|[^а-яА-ЯA-zA-Z]', ' ', x).split())
 
 
-# In[107]:
+# In[22]:
 
 
 tmp_ttl = 'Захарова предложила Евросоюзу «отменить себя»\n                \n                                                    \n\n    \n\n    Политика,\xa012:28'
 
 
+# In[23]:
+
+
+def find_cat_collisions(inp_df):
+    
+    #print(type(inp_df), inp_df.shape)
+    
+    
+    if inp_df[3] > 50:
+        tmp = clean_text(inp_df[2])
+        if tmp.split()[-1] in {'янв','фев','мар','апр','май','мая','июн','июл','авг','сен','окт','ноя','дек'}:
+            tmp = ' '.join(tmp.split()[:-1])
+        if tmp.split()[-1] != category_decode[inp_df[1]]['last_word']:
+            print(inp_df[0], inp_df[1], inp_df[2], inp_df[3])
+            print(tmp.split()[-1], category_decode[inp_df[1]]['name']) 
+
+
+# In[24]:
+
+
+def clean_title(inp_val):
+    
+    #print(type(inp_df), inp_df.shape)
+    len_before = len(inp_val)
+    inp_val = clean_text(inp_val)
+    
+    if len(inp_val) - len_before > 50:
+        if inp_val.split()[-1] in {'янв','фев','мар','апр','май','мая','июн','июл','авг','сен','окт','ноя','дек'}:
+            inp_val = ' '.join(inp_val.split()[:-1])
+            
+        
+    if inp_val.split()[-1] in {'Город', 'Общество', 'Политика', 'Финансы', 'Экономика', 'Бизнес'}:
+        inp_val = ' '.join(inp_val.split()[:-1])
+    
+    if inp_val.split()[-1] == 'медиа' or inp_val.split()[-1] == 'медия':
+        inp_val = ' '.join(inp_val.split()[:-3])
+    
+    if inp_val.split()[-1] == 'клуб':
+        inp_val = ' '.join(inp_val.split()[:-2])
+    
+            
+    return inp_val
+
+
+# In[26]:
+
+
+df_train['title_len_diff'] = df_train.title.apply(lambda x: len(x) - len(clean_text(x)))
+df_test['title_len_diff']  = df_test.title.apply(lambda x: len(x) - len(clean_text(x)))
+
+
+# In[27]:
+
+
+df_train[['document_id', 'category', 'title', 'title_len_diff']].apply(find_cat_collisions, axis = 1)
+
+
 # In[108]:
 
 
-len(clean_text(tmp_ttl)), len(tmp_ttl)
+
 
 
 # In[109]:
 
 
-df_train['title_len_diff'] = df_train.title.apply(lambda x: len(x) - len(clean_text(x)))
-df_test['title_len_diff']  = df_test.title.apply(lambda x: len(x) - len(clean_text(x)))
+
 
 
 # In[110]:
@@ -676,12 +769,6 @@ df_train[df_train.title_len_diff > 50].title.sample(10).values
 
 
 # 'Власти Москвы рассказали о ходе работ на Рублево-Архангельской линии\n                \n                                                    \n\n    \n\n    Город,\xa012:03',
-
-
-# In[ ]:
-
-
-Политика, Технологии и медиа, Экономика, Общество, Бизнес, ????Финансы
 
 
 # In[ ]:

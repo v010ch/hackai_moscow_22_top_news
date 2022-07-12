@@ -104,9 +104,11 @@ x
 #PRE_TRAINED_MODEL_NAME = 'blanchefort/rubert-base-cased-sentiment-rurewiews'
 #MODEL_FOLDER = 'ru-blanchefort-rurewiews2'
 
+#'DeepPavlov/rubert-base-cased-sentence'
+#'sberbank-ai/sbert_large_mt_nlu_ru'
 
-PRE_TRAINED_MODEL_NAME = 'sberbank-ai/sbert_large_mt_nlu_ru'
-MODEL_FOLDER = 'sbert_large_mt_nlu_ru'
+PRE_TRAINED_MODEL_NAME = 'DeepPavlov/rubert-base-cased-sentence'
+MODEL_FOLDER = 'rubert-base-cased-sentence'
 
 
 MAX_LENGTH = 24
@@ -181,25 +183,25 @@ col_names = [f'tt_emb{idx}' for idx in range(df_train.ttl_emb[0].shape[0])]
 emb_train = pd.DataFrame(df_train.ttl_emb.to_list(), columns = col_names)
 
 
-# In[20]:
+# In[18]:
 
 
 df_train = pd.concat([df_train, emb_train], axis=1)
 
 
-# In[21]:
+# In[19]:
 
 
 df_train.drop('ttl_emb', axis = 1, inplace = True)
 
 
-# In[22]:
+# In[20]:
 
 
 df_train.head(3)
 
 
-# In[23]:
+# In[21]:
 
 
 df_train.to_csv(os.path.join(DIR_DATA, f'ttl_emb_train_{MODEL_FOLDER}_{MAX_LENGTH}.csv'), index = False)
@@ -219,44 +221,44 @@ df_train.to_csv(os.path.join(DIR_DATA, f'ttl_emb_train_{MODEL_FOLDER}_{MAX_LENGT
 
 # ## Same with test
 
-# In[15]:
+# In[22]:
 
 
 df_test = df_test[['document_id', 'title']]
 
 
-# In[16]:
+# In[23]:
 
 
 df_test['ttl_emb'] = df_test.title.progress_apply(lambda x: ttl_to_emb(x))
 
 
-# In[19]:
+# In[24]:
 
 
 col_names = [f'tt_emb{idx}' for idx in range(df_test.ttl_emb[0].shape[0])]
 emb_test = pd.DataFrame(df_test.ttl_emb.to_list(), columns = col_names)
 
 
-# In[24]:
+# In[25]:
 
 
 df_test = pd.concat([df_test, emb_test], axis=1)
 
 
-# In[25]:
+# In[26]:
 
 
 df_test.drop('ttl_emb', axis = 1, inplace = True)
 
 
-# In[26]:
+# In[27]:
 
 
 df_test.shape
 
 
-# In[27]:
+# In[28]:
 
 
 df_test.to_csv(os.path.join(DIR_DATA, f'ttl_emb_test_{MODEL_FOLDER}_{MAX_LENGTH}.csv'), index = False)

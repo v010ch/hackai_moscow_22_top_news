@@ -22,6 +22,7 @@ models/*
 tst_*
 test_*
 *temp*
+*tmp*
 log_*
 
 *.bat
