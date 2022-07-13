@@ -341,6 +341,11 @@ val_ds_views = lgb.Dataset(x_val[cat_cols + num_cols],
                              y_val[['views']],
                              #feature_name = [cat_cols + num_cols]
                             )
+
+train_views_full = lgb.Dataset(df_train[cat_cols + num_cols],
+                             df_train[['views']],
+                             #feature_name = [cat_cols + num_cols]
+                            )
 #!!!!!!!!!!!!!!!!!!!!!!! #lgb_eval = lgb.Dataset(x_test, y_test, reference=lgb_train)
 
 
@@ -353,7 +358,10 @@ val_ds_depth = lgb.Dataset(x_val[cat_cols + num_cols],
                              y_val[['depth']],
                              #feature_name = [cat_cols + num_cols]
                             )
-
+train_depth_full = lgb.Dataset(df_train[cat_cols + num_cols],
+                             df_train[['depth']],
+                             #feature_name = [cat_cols + num_cols]
+                            )
 
 
 #train_ds_frp
@@ -399,6 +407,27 @@ params = {
     
     'random_seed': LGB_RANDOMSEED,
 }
+
+
+# In[ ]:
+
+
+score = lgb.cv(params, 
+                 train_views_full, 
+                 num_boost_round = 10000,
+                 nfold = 5,
+                 verbose_eval = 500,
+                 early_stopping_rounds = 100,
+                 stratified = False,
+                 #return_cvbooster = True,
+                )
+print(np.argmin(score['rmse-mean']), score['rmse-mean'][np.argmin(score['rmse-mean'])], score['rmse-stdv'][np.argmin(score['rmse-mean'])], )
+
+
+# In[ ]:
+
+
+
 
 
 # In[ ]:
@@ -479,6 +508,21 @@ params = {
 }
 
 
+# In[ ]:
+
+
+score = lgb.cv(params, 
+                 train_depth_full, 
+                 num_boost_round = 10000,
+                 nfold = 5,
+                 verbose_eval = 500,
+                 early_stopping_rounds = 100,
+                 stratified = False,
+                 #return_cvbooster = True,
+                )
+print(np.argmin(score['rmse-mean']), score['rmse-mean'][np.argmin(score['rmse-mean'])], score['rmse-stdv'][np.argmin(score['rmse-mean'])], )
+
+527 0.033012107561271466 0.0030376669191820643 0.05
 # In[ ]:
 
 
@@ -566,7 +610,27 @@ val_ds_frp = lgb.Dataset(x_val[cat_cols + num_cols],
                              #feature_name = [cat_cols + num_cols]
                             )
 
+train_frp_full = lgb.Dataset(df_train[cat_cols + num_cols],
+                             df_train[['full_reads_percent']],
+                             #feature_name = [cat_cols + num_cols]
+                            )
 
+
+# In[ ]:
+
+
+score = lgb.cv(params, 
+                 train_frp_full, 
+                 num_boost_round = 10000,
+                 nfold = 5,
+                 verbose_eval = 500,
+                 early_stopping_rounds = 100,
+                 stratified = False,
+                 #return_cvbooster = True,
+                )
+print(np.argmin(score['rmse-mean']), score['rmse-mean'][np.argmin(score['rmse-mean'])], score['rmse-stdv'][np.argmin(score['rmse-mean'])], )
+
+116 6.913873743947444 0.09869780290074098
 # In[ ]:
 
 

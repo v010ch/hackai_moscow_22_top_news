@@ -108,6 +108,7 @@ DIR_SUBM_PART = os.path.join(os.getcwd(), 'subm', 'partial')
 # In[ ]:
 
 
+df_train  = pd.read_csv(os.path.join(DIR_DATA, 'train_upd.csv'), index_col= 0)
 x_train  = pd.read_csv(os.path.join(DIR_DATA, 'x_train.csv'), index_col= 0)
 x_val    = pd.read_csv(os.path.join(DIR_DATA, 'x_val.csv'), index_col= 0)
 df_test  = pd.read_csv(os.path.join(DIR_DATA, 'test_upd.csv'), index_col= 0)
@@ -213,6 +214,13 @@ val_ds_views   = Pool(x_val[cat_cols + num_cols],
                       cat_features = cat_cols,
                       #feature_names = cat_cols + num_cols
                      )
+train_views_full = Pool(df_train[cat_cols + num_cols],
+#train_ds_views = Pool(x_train[cat_cols + ['ctr']],
+                      df_train[['views']],
+                      cat_features = cat_cols,
+                      #feature_names = cat_cols + num_cols
+                     )
+
 
 
 #depth
@@ -226,6 +234,12 @@ val_ds_depth   = Pool(x_val[cat_cols + num_cols],
                       y_val[['depth']],
                       cat_features = cat_cols,
                       feature_names = cat_cols + num_cols
+                     )
+train_depth_full = Pool(df_train[cat_cols + num_cols],
+#train_ds_views = Pool(x_train[cat_cols + ['ctr']],
+                      df_train[['depth']],
+                      cat_features = cat_cols,
+                      #feature_names = cat_cols + num_cols
                      )
 
 
@@ -284,6 +298,29 @@ def plot_feature_importance(importance,names,model_type, imp_number = 30):
 
 
 # ## views
+
+# In[ ]:
+
+
+
+
+
+# In[ ]:
+
+
+scores_views = cv(train_views_full,
+            cb_params_views,
+            fold_count=5,
+            random_seed = CB_RANDOMSEED, 
+            #plot="True"
+                 )
+
+
+# In[ ]:
+
+
+
+
 
 # In[ ]:
 

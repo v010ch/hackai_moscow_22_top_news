@@ -23,6 +23,7 @@ import numpy as np
 import pandas as pd
 
 from xgboost import XGBRegressor
+import xgboost as xgb
 from sklearn.metrics import r2_score
 from sklearn import preprocessing
 
@@ -100,6 +101,7 @@ DIR_SUBM_PART = os.path.join(os.getcwd(), 'subm', 'partial')
 # In[ ]:
 
 
+df_train  = pd.read_csv(os.path.join(DIR_DATA, 'train_upd.csv'), index_col= 0)
 x_train  = pd.read_csv(os.path.join(DIR_DATA, 'x_train.csv'), index_col= 0)
 x_val    = pd.read_csv(os.path.join(DIR_DATA, 'x_val.csv'), index_col= 0)
 df_test  = pd.read_csv(os.path.join(DIR_DATA, 'test_upd.csv'), index_col= 0)
@@ -184,7 +186,70 @@ def plot_importance(inp_model, imp_number = 30, imp_type = 'weight'):
 
 
 
+# In[ ]:
+
+
+
+
+
+# In[ ]:
+
+
+cv_ntrees = 100
+
+
 # ## views
+
+# In[ ]:
+
+
+#xgb.set_config(verbosity=0)
+
+
+# In[ ]:
+
+
+cb_params_views = {
+    'booster': 'gbtree',
+    'objective': 'reg:squarederror',
+    #'learning_rate': 0.05,
+    'eta': 0.3,
+    'max_depth': 15, 
+    #'num_boost_round': 10000, 
+    #'early_stopping_rounds': 100,
+}
+dtrain = xgb.DMatrix(df_train[num_cols], label=df_train[['views']])
+
+
+# In[ ]:
+
+
+get_ipython().run_cell_magic('time', '', "score = xgb.cv(cb_params_views, dtrain, cv_ntrees, nfold=5, #early_stopping_rounds=1000,\n       metrics={'rmse'},\n       #callbacks=[xgb.callback.EvaluationMonitor(show_stdv=True)]\n      )")
+
+
+# In[ ]:
+
+
+score.tail(5)
+
+
+# In[ ]:
+
+
+score[score['train-rmse-mean'] == score['train-rmse-mean'].min()][:1]
+
+
+# In[ ]:
+
+
+score[score['test-rmse-mean'] == score['test-rmse-mean'].min()][:1]
+
+
+# In[ ]:
+
+
+
+
 
 # In[ ]:
 
@@ -247,6 +312,52 @@ plot_importance(xgb_model_views, 30, 'weight')
 # In[ ]:
 
 
+
+
+
+# In[ ]:
+
+
+cb_params_depth = {
+    'booster': 'gbtree',
+    'objective': 'reg:squarederror',
+    #'n_estimators': 1000, 
+    #'learning_rate': 0.05,
+    'eta': 0.3,
+    'max_depth': 15, 
+ #   'num_boost_round': 10000, 
+ #   'early_stopping_rounds': 100,
+}
+dtrain = xgb.DMatrix(df_train[num_cols], label=df_train[['depth']])
+
+
+# In[ ]:
+
+
+get_ipython().run_cell_magic('time', '', "score = xgb.cv(cb_params_depth, dtrain, cv_ntrees, nfold=5, #early_stopping_rounds=1000,\n       metrics={'rmse'},\n       #callbacks=[xgb.callback.EvaluationMonitor(show_stdv=True)]\n      )\nscore.tail()")
+
+
+# In[ ]:
+
+
+score[score['train-rmse-mean'] == score['train-rmse-mean'].min()][:1]
+
+
+# In[ ]:
+
+
+score[score['test-rmse-mean'] == score['test-rmse-mean'].min()][:1]
+
+
+# In[ ]:
+
+
+
+
+
+# In[ ]:
+
+
 xgb_model_depth = XGBRegressor(n_estimators=1000, 
                                max_depth=7, 
                                eta=0.1, 
@@ -295,6 +406,52 @@ plot_importance(xgb_model_depth, 30, 'weight')
 
 
 # ## full_reads_percent
+
+# In[ ]:
+
+
+
+
+
+# In[ ]:
+
+
+cb_params_fpr = {
+    'booster': 'gbtree',
+    'objective': 'reg:squarederror',
+    #'n_estimators': 1000, 
+    #'learning_rate': 0.05,
+    'eta': 0.3,
+    'max_depth': 15, 
+ #   'num_boost_round': 10000, 
+ #   'early_stopping_rounds': 100,
+}
+dtrain = xgb.DMatrix(df_train[num_cols], label=df_train[['full_reads_percent']])
+
+
+# In[ ]:
+
+
+get_ipython().run_cell_magic('time', '', "score = xgb.cv(cb_params_fpr, dtrain, cv_ntrees, nfold=5, #early_stopping_rounds=1000,\n       metrics={'rmse'},\n       #callbacks=[xgb.callback.EvaluationMonitor(show_stdv=True)]\n      )\nscore.tail()")
+
+
+# In[ ]:
+
+
+score[score['train-rmse-mean'] == score['train-rmse-mean'].min()][:1]
+
+
+# In[ ]:
+
+
+score[score['test-rmse-mean'] == score['test-rmse-mean'].min()][:1]
+
+
+# In[ ]:
+
+
+
+
 
 # In[ ]:
 
