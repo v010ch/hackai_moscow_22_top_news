@@ -7,7 +7,7 @@
 
 
 
-# In[1]:
+# In[ ]:
 
 
 import os
@@ -23,22 +23,22 @@ import pandas as pd
 
 
 
-# In[2]:
+# In[ ]:
 
 
 DIR_SUBM   = os.path.join(os.getcwd(), 'subm')
 
 
-# In[3]:
+# In[ ]:
 
 
 subm_views = pd.read_csv(os.path.join(DIR_SUBM, '1_xgb_baseline_test.csv'),     usecols=['document_id', 'views'])
-subm_depth = pd.read_csv(os.path.join(DIR_SUBM, '6_1_xgb_lags_emb_dp.csv'),     usecols=['document_id', 'depth'])
-subm_frp   = pd.read_csv(os.path.join(DIR_SUBM, '6_1_lgb_ttl_emb_depth_frp_dp.csv'), usecols=['document_id', 'full_reads_percent'])
+subm_depth = pd.read_csv(os.path.join(DIR_SUBM, '7_xgb_lags_emb.csv'),          usecols=['document_id', 'depth'])
+subm_frp   = pd.read_csv(os.path.join(DIR_SUBM, '7_xgb_lags_emb.csv'), usecols=['document_id', 'full_reads_percent'])
 print(subm_views.shape, subm_depth.shape, subm_frp.shape)
 
 
-# In[4]:
+# In[ ]:
 
 
 subm = subm_views.merge(subm_depth, on='document_id', validate='one_to_one')
@@ -52,16 +52,16 @@ subm = subm.merge(subm_frp, on='document_id', validate='one_to_one')
 
 
 
-# In[5]:
+# In[ ]:
 
 
-NTYPE = 6
+NTYPE = 7
 
 
-# In[6]:
+# In[ ]:
 
 
-subm.to_csv(os.path.join(DIR_SUBM, f'{NTYPE}_1_concatenate.csv'), index = False)
+subm.to_csv(os.path.join(DIR_SUBM, f'{NTYPE}_concatenate.csv'), index = False)
 
 
 # In[ ]:

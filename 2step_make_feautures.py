@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[1]:
+# In[ ]:
 
 
 import os
@@ -23,7 +23,7 @@ tqdm.pandas()
 
 # ## Reproducibility block
 
-# In[2]:
+# In[ ]:
 
 
 # seed the RNG for all devices (both CPU and CUDA)
@@ -49,7 +49,7 @@ np.random.seed(62185)
 
 
 
-# In[3]:
+# In[ ]:
 
 
 DIR_DATA  = os.path.join(os.getcwd(), 'data')
@@ -84,17 +84,17 @@ ce.WOEEncoder(),
 
 
 
-# In[4]:
+# In[ ]:
 
 
-df_train = pd.read_csv(os.path.join(DIR_DATA, 'train.csv'))#, index_col= 0)
-df_test  = pd.read_csv(os.path.join(DIR_DATA, 'test.csv'))#, index_col= 0)
+df_train = pd.read_csv(os.path.join(DIR_DATA, 'train_extended.csv'))#, index_col= 0)
+df_test  = pd.read_csv(os.path.join(DIR_DATA, 'test_extended.csv'))#, index_col= 0)
 
 df_train['publish_date'] = pd.to_datetime(df_train['publish_date'])
 df_test['publish_date']  = pd.to_datetime(df_test['publish_date'])
 
 
-# In[5]:
+# In[ ]:
 
 
 df_train.shape, df_test.shape
@@ -115,10 +115,14 @@ df_train.shape, df_test.shape
 # признаки, которые могу быть как числовыми так и категориальными: [ ]   
 # }}
 
-# In[6]:
+# In[ ]:
 
 
-clmns = {'publish_date': {'num':  [],   
+clmns = {'document_id':{'num':  ['nimgs','text_len', ],   
+                        'cat':  [],
+                        'both': [],
+                        },
+        'publish_date': {'num':  [],   
                           'cat':  [],
                           'both': [],
                          },
@@ -131,7 +135,7 @@ clmns = {'publish_date': {'num':  [],
                       'both': [],
                      },
          'title': {'num':  [],   
-                   'cat':  [],
+                   'cat':  ['two_articles'],
                    'both': [],
                 },
         }
@@ -140,7 +144,7 @@ clmns = {'publish_date': {'num':  [],
 # In[ ]:
 
 
-
+print(df_train.columns.values)
 
 
 # In[ ]:
@@ -155,7 +159,7 @@ clmns = {'publish_date': {'num':  [],
 # 
 # уберем статьи раньше минимальной даты в тесте. для начала так, дальше можно будет поиграться.
 
-# In[7]:
+# In[ ]:
 
 
 def clear_data(inp_df: pd.DataFrame, min_time: pd.Timestamp) -> pd.DataFrame:
@@ -176,7 +180,7 @@ def clear_data(inp_df: pd.DataFrame, min_time: pd.Timestamp) -> pd.DataFrame:
     return inp_df
 
 
-# In[8]:
+# In[ ]:
 
 
 #min_test_time = df_test['publish_date'].min()
@@ -204,12 +208,31 @@ df_train = clear_data(df_train, min_test_time)
 # In[ ]:
 
 
+holidays = {pd.Timestamp('2022-01-01').date(), pd.Timestamp('2022-01-02').date(), pd.Timestamp('2022-01-03').date(),
+            pd.Timestamp('2022-01-04').date(), pd.Timestamp('2022-01-05').date(), pd.Timestamp('2022-01-06').date(),  #NY
+            pd.Timestamp('2022-01-07').date(), pd.Timestamp('2022-01-08').date(), pd.Timestamp('2022-01-08').date(),
+            pd.Timestamp('2022-02-23').date(), # 23 feb
+            pd.Timestamp('2022-03-06').date(), pd.Timestamp('2022-03-07').date(), pd.Timestamp('2022-03-08').date(), # 8 march
+            pd.Timestamp('2022-05-02').date(), pd.Timestamp('2022-05-03').date(), # 1st may
+            pd.Timestamp('2022-05-09').date(), pd.Timestamp('2022-05-10').date(),# 9 may
+            pd.Timestamp('2022-06-12').date(), pd.Timestamp('2022-06-13').date(), # day of the russia
+            pd.Timestamp('2022-11-04').date()
+           }
+
+day_before_holiday = {pd.Timestamp('2021-12-31').date(), pd.Timestamp('2022-02-22').date(), pd.Timestamp('2022-03-05').date(),
+                      pd.Timestamp('2022-02-23').date(),
+                      pd.Timestamp('2022-04-29').date(), pd.Timestamp('2022-05-04').date(), 
+                      pd.Timestamp('2022-05-05').date(), pd.Timestamp('2022-05-06').date(),
+                      pd.Timestamp('2022-11-03').date(),
+                      #pd.Timestamp('2022-12-03').date(),
+                      #pd.Timestamp('2022-11-03').date(),
+                     }
+day_after_holiday = {pd.Timestamp('2022-01-10').date(), pd.Timestamp('2022-02-24').date(), pd.Timestamp('2022-03-09').date(), 
+                     pd.Timestamp('2022-06-14').date(), pd.Timestamp('2022-05-11').date(),
+                    }
 
 
-
-# ## publish_date
-
-# In[9]:
+# In[ ]:
 
 
 def publish_date_features(inp_df: pd.DataFrame) -> pd.DataFrame:
@@ -224,12 +247,22 @@ def publish_date_features(inp_df: pd.DataFrame) -> pd.DataFrame:
     inp_df['day']    = pd.to_datetime(inp_df['publish_date']).dt.strftime("%d").astype(int)
     inp_df['mounth'] = pd.to_datetime(inp_df['publish_date']).dt.strftime("%m").astype(int)
     
-    clmns['publish_date']['both'].extend(['hour', 'dow', 'day', 'mounth'])
+    
+    inp_df['holiday'] = inp_df.m_d.apply(lambda x: 1 if x in holidays else 0)
+    inp_df['day_before_holiday'] = inp_df.m_d.apply(lambda x: 1 if x in day_before_holiday else 0)
+    inp_df['day_after_holiday'] = inp_df.m_d.apply(lambda x: 1 if x in day_after_holiday else 0)
+    
+    
+    if 'hour' not in clmns['publish_date']['both']:
+        clmns['publish_date']['both'].extend(['hour', 'dow', 'day', 'mounth'])
+        
+    if 'holiday' not in clmns['publish_date']['cat']:
+        clmns['publish_date']['cat'].extend(['holiday', 'day_before_holiday', 'day_after_holiday',]) 
     
     return inp_df
 
 
-# In[10]:
+# In[ ]:
 
 
 print('before ', df_train.shape, df_test.shape)
@@ -241,18 +274,25 @@ print('after  ', df_train.shape, df_test.shape)
 # In[ ]:
 
 
+print(sum(df_train.holiday), sum(df_train.day_before_holiday), sum(df_train.day_after_holiday), )
+print(sum(df_test.holiday), sum(df_test.day_before_holiday), sum(df_test.day_after_holiday), )
+
+
+# In[ ]:
+
+
 
 
 
 # Рассчитаем дневные статистики + лаги за 7 дней
 
-# In[11]:
+# In[ ]:
 
 
 df_train.sort_values(by='m_d').m_d.diff().value_counts()
 
 
-# In[12]:
+# In[ ]:
 
 
 def create_daily_stats(inp_df: pd.DataFrame, max_lags: int = 7) -> pd.DataFrame:
@@ -277,7 +317,7 @@ def create_daily_stats(inp_df: pd.DataFrame, max_lags: int = 7) -> pd.DataFrame:
     return ret_df
 
 
-# In[13]:
+# In[ ]:
 
 
 daily_stats = create_daily_stats(df_train)
@@ -292,7 +332,7 @@ daily_stats.to_csv(os.path.join(DIR_DATA, 'dayly_stats.csv'), index = False)
 
 # Добавим их к датасетам
 
-# In[14]:
+# In[ ]:
 
 
 def add_daily_stats(inp_df:pd.DataFrame) -> pd.DataFrame:
@@ -300,12 +340,13 @@ def add_daily_stats(inp_df:pd.DataFrame) -> pd.DataFrame:
     #ret_df = inp_df.merge(daily_stats, on = 'm_d', validate = 'many_to_one')
     ret_df = inp_df.merge(daily_stats, on = 'm_d', how = 'left', validate = 'many_to_one')
     
-    clmns['publish_date']['num'].extend(daily_stats.columns[1:])
+    if 'views_min' not in clmns['publish_date']['num']:
+        clmns['publish_date']['num'].extend(daily_stats.columns[1:])
     
     return ret_df
 
 
-# In[15]:
+# In[ ]:
 
 
 print('before ', df_train.shape, df_test.shape, 'add ', daily_stats.shape)
@@ -316,7 +357,7 @@ print('after  ', df_train.shape, df_test.shape)
 
 # Проверим на пропуски в тесте
 
-# In[16]:
+# In[ ]:
 
 
 df_test[['views_min', 'views_max', 'views_mean', 'views_std',
@@ -357,7 +398,7 @@ df_test[['views_min', 'views_max', 'views_mean', 'views_std',
 
 # Авторы считываются как строки, а не как массив строк. исправим.
 
-# In[17]:
+# In[ ]:
 
 
 df_train['authors']  = df_train.authors.apply(lambda x: literal_eval(x))
@@ -368,14 +409,14 @@ df_train['authors'] = df_train['authors'].apply(lambda x: x if len(x) > 0 else [
 df_test['authors']  = df_test['authors'].apply( lambda x: x if len(x) > 0 else ['without_author'])
 
 
-# In[18]:
+# In[ ]:
 
 
 df_train['Nauthors'] = df_train.authors.apply(lambda x: len(x))
 df_test['Nauthors']  = df_test.authors.apply(lambda x: len(x))
 
 
-# In[19]:
+# In[ ]:
 
 
 clmns['authors']['num'].extend(['Nauthors'])
@@ -383,7 +424,7 @@ clmns['authors']['num'].extend(['Nauthors'])
 
 # выделяем всех авторов в трейне
 
-# In[20]:
+# In[ ]:
 
 
 all_authors = set()
@@ -400,7 +441,7 @@ for el in df_train.authors.values:
 
 # проверяем на наличия авторов из теста
 
-# In[21]:
+# In[ ]:
 
 
 test_authors = set()
@@ -430,7 +471,7 @@ for el in test_authors:
 
 # Все статьи автора (с учетом совместных)
 
-# In[22]:
+# In[ ]:
 
 
 auth_doc_id = {el: [] for el in all_authors}
@@ -445,7 +486,7 @@ with open(os.path.join(DIR_DATA, 'authors_all.pkl'), 'wb') as pkl_file:
 
 # Статьи только автора (в одиночку)(пока не применяется)
 
-# In[23]:
+# In[ ]:
 
 
 auth_doc_id_alone = {el: [] for el in all_authors}
@@ -466,7 +507,7 @@ with open(os.path.join(DIR_DATA, 'authors_alone.pkl'), 'wb') as pkl_file:
 
 # Соберем статистику по авторам (с учетом совместных)
 
-# In[24]:
+# In[ ]:
 
 
 author_columns = ['author', 'author_size', 'v_auth_min', 'v_auth_max', 'v_auth_mean', 'v_auth_std', 'd_auth_min',
@@ -482,7 +523,7 @@ author_group_columns = ['author_size',
                    ]
 
 
-# In[25]:
+# In[ ]:
 
 
 df_author = pd.DataFrame(columns = author_columns)
@@ -515,13 +556,13 @@ df_author.loc['mean', ['author']] = '5a2511349a794727e3fa3d20'
 df_author.loc['mean2', ['author']] = '57f766ae9a79479bfcfa0133'
 
 
-# In[26]:
+# In[ ]:
 
 
 df_author.to_csv(os.path.join(DIR_DATA, 'author_together.csv'), index = False)
 
 
-# In[27]:
+# In[ ]:
 
 
 #df_author.tail()
@@ -535,7 +576,7 @@ df_author.to_csv(os.path.join(DIR_DATA, 'author_together.csv'), index = False)
 
 # Добавляем статистики по авторам в датасеты
 
-# In[28]:
+# In[ ]:
 
 
 def add_author_statistics(inp_df):
@@ -584,7 +625,7 @@ def add_author_statistics(inp_df):
     return ret_np
 
 
-# In[29]:
+# In[ ]:
 
 
 # кроме полей author / author_size
@@ -598,7 +639,7 @@ author_stats_test  = df_test[ ['authors']].progress_apply(add_author_statistics,
 print('after', df_train.shape, df_test.shape)
 
 
-# In[30]:
+# In[ ]:
 
 
 #clmns['authors']['num'].extend(author_columns[2:])
@@ -634,7 +675,7 @@ print('after', df_train.shape, df_test.shape)
 
 # Собираем статистики по категориям
 
-# In[31]:
+# In[ ]:
 
 
 def create_daily_stats_by_category(inp_df: pd.DataFrame, max_lags: int = 7) -> pd.DataFrame:
@@ -663,7 +704,7 @@ def create_daily_stats_by_category(inp_df: pd.DataFrame, max_lags: int = 7) -> p
     return ret_df
 
 
-# In[32]:
+# In[ ]:
 
 
 daily_stats_category = create_daily_stats_by_category(df_train)
@@ -678,7 +719,7 @@ daily_stats_category.to_csv(os.path.join(DIR_DATA, 'daily_stats_category.csv'), 
 
 # Добавляем статистики по категориям в датасеты
 
-# In[33]:
+# In[ ]:
 
 
 def add_daily_stats_category(inp_df:pd.DataFrame) -> pd.DataFrame:
@@ -689,7 +730,7 @@ def add_daily_stats_category(inp_df:pd.DataFrame) -> pd.DataFrame:
     return ret_df
 
 
-# In[34]:
+# In[ ]:
 
 
 print('before ', df_train.shape, df_test.shape, 'add ', daily_stats_category.shape)
@@ -698,7 +739,7 @@ df_test = add_daily_stats_category(df_test)
 print('after  ', df_train.shape, df_test.shape, )
 
 
-# In[35]:
+# In[ ]:
 
 
 clmns['category']['num'].extend(daily_stats_category.columns[2:])
@@ -706,7 +747,7 @@ clmns['category']['num'].extend(daily_stats_category.columns[2:])
 
 # Проверяем, что все данные есть в тесте
 
-# In[36]:
+# In[ ]:
 
 
 #df_test[['cat_views_min', 'cat_views_max', 'cat_views_mean', 'cat_views_std',
@@ -737,7 +778,7 @@ df_test[daily_stats_category.columns[2:]].isnull().sum()
 
 # ## tags
 
-# In[37]:
+# In[ ]:
 
 
 df_train['tags']  = df_train.tags.apply(lambda x: literal_eval(x))
@@ -760,7 +801,7 @@ df_test['tags']   = df_test.tags.apply( lambda x: literal_eval(x))
 
 # выделяем числовые признаки для нормализации
 
-# In[38]:
+# In[ ]:
 
 
 # исключаем из нормализации категориальные признаки
@@ -774,6 +815,8 @@ for el in clmns.keys():
 num_cols = [el for el in df_test.columns.to_list() if el not in cat_cols]
 num_cols = [el for el in num_cols if el not in ['document_id', 'title', 'publish_date', 'm_d', 'session', 'authors', 'category', 'tags', 
                                                 
+                                                'true_category', 'true_title', 'overview', 
+                                                
                                                 'views_min', 'views_max', 'views_mean', 'views_std',   # not interested in the current day
                                                 'depth_min', 'depth_max', 'depth_mean', 'depth_std',   # not interested in the current day
                                                 'frp_min', 'frp_max', 'frp_mean', 'frp_std',           # not interested in the current day
@@ -785,7 +828,13 @@ num_cols = [el for el in num_cols if el not in ['document_id', 'title', 'publish
                                                 'views', 'depth', 'full_reads_percent']]
 
 
-# In[39]:
+# In[ ]:
+
+
+
+
+
+# In[ ]:
 
 
 for el in num_cols:
@@ -799,7 +848,7 @@ for el in cat_cols:
 
 # нормализуем
 
-# In[40]:
+# In[ ]:
 
 
 #scaler = preprocessing.MinMaxScaler()   #Transform features by scaling each feature to a given range.
@@ -832,7 +881,7 @@ df_test[num_cols]  = scaler.transform(df_test[num_cols])
 
 # Добавляем эмбединги
 
-# In[41]:
+# In[ ]:
 
 
 # sberbank-ai/sbert_large_mt_nlu_ru       1024  1.71Gb
@@ -848,7 +897,7 @@ def add_ttle_embeding(inp_df: pd.DataFrame) -> pd.DataFrame:
     
     pass    
     
-# In[42]:
+# In[ ]:
 
 
 emb_train = pd.read_csv(os.path.join(DIR_DATA, f'ttl_emb_train_{MODEL_FOLDER}_{MAX_LENGTH}.csv'))
@@ -859,7 +908,7 @@ df_train = df_train.merge(emb_train, on = 'document_id', validate = 'one_to_one'
 df_train.shape, emb_train.shape
 
 
-# In[43]:
+# In[ ]:
 
 
 emb_test = pd.read_csv(os.path.join(DIR_DATA, f'ttl_emb_test_{MODEL_FOLDER}_{MAX_LENGTH}.csv'))
@@ -870,20 +919,20 @@ df_test = df_test.merge(emb_test, on = 'document_id', validate = 'one_to_one')
 df_test.shape, emb_test.shape
 
 
-# In[44]:
+# In[ ]:
 
 
 num_cols = num_cols + list(emb_train.columns)
 
 
-# In[45]:
+# In[ ]:
 
 
 if 'document_id' in num_cols:
     num_cols.remove('document_id')
 
 
-# In[46]:
+# In[ ]:
 
 
 clmns['title']['num'].extend(emb_train.columns[1:])
@@ -900,7 +949,7 @@ clmns['title']['num'].extend(emb_train.columns[1:])
 # вероятно лучше разделять до нормализации и категориальных энкодеров, что бы значения из валидационной выборки не были в учтены в тесте   
 # однако, на первой итерации устроит и разбиение после всех преобразований
 
-# In[47]:
+# In[ ]:
 
 
 x_train, x_val = train_test_split(df_train, stratify = df_train['category'], test_size = 0.2)
@@ -915,13 +964,13 @@ df_train.shape, x_train.shape, x_val.shape
 
 # ## save
 
-# In[48]:
+# In[ ]:
 
 
 df_test.shape, x_train.shape, x_val.shape, df_test.shape
 
 
-# In[49]:
+# In[ ]:
 
 
 df_train.to_csv(os.path.join( DIR_DATA, 'train_upd.csv'))
@@ -930,21 +979,21 @@ x_train.to_csv(os.path.join(DIR_DATA,   'x_train.csv'))
 x_val.to_csv(os.path.join(DIR_DATA,     'x_val.csv'))
 
 
-# In[50]:
+# In[ ]:
 
 
 with open(os.path.join(DIR_DATA, 'num_columns.pkl'), 'wb') as pickle_file:
     pkl.dump(num_cols, pickle_file)
 
 
-# In[51]:
+# In[ ]:
 
 
 with open(os.path.join(DIR_DATA, 'cat_columns.pkl'), 'wb') as pickle_file:
     pkl.dump(cat_cols, pickle_file)
 
 
-# In[52]:
+# In[ ]:
 
 
 with open(os.path.join(DIR_DATA, 'clmns.pkl'), 'wb') as pickle_file:
@@ -961,6 +1010,18 @@ with open(os.path.join(DIR_DATA, 'clmns.pkl'), 'wb') as pickle_file:
 
 
 
+
+
+# In[ ]:
+
+
+cat_cols
+
+
+# In[ ]:
+
+
+print(num_cols)
 
 
 # In[ ]:

@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[1]:
+# In[ ]:
 
 
 import os
@@ -16,7 +16,7 @@ from tqdm.auto import tqdm  # for notebooks
 tqdm.pandas()
 
 
-# In[2]:
+# In[ ]:
 
 
 import torch
@@ -34,13 +34,13 @@ from transformers import AutoTokenizer, AutoModel
 
 
 
-# In[3]:
+# In[ ]:
 
 
 DIR_DATA  = os.path.join(os.getcwd(), 'data')
 
 
-# In[4]:
+# In[ ]:
 
 
 #MUSE, sbert_large_mt_nlu_ru и rubert-base-cased-sentence
@@ -48,14 +48,14 @@ DIR_DATA  = os.path.join(os.getcwd(), 'data')
 
 # ## Prepare data
 
-# In[5]:
+# In[ ]:
 
 
-df_train = pd.read_csv(os.path.join(DIR_DATA, 'train.csv'))#, index_col= 0)
-df_test  = pd.read_csv(os.path.join(DIR_DATA, 'test.csv'))#, index_col= 0)
+df_train = pd.read_csv(os.path.join(DIR_DATA, 'train_extended.csv'))#, index_col= 0)
+df_test  = pd.read_csv(os.path.join(DIR_DATA, 'test_extended.csv'))#, index_col= 0)
 
 
-# In[6]:
+# In[ ]:
 
 
 # sberbank-ai/sbert_large_mt_nlu_ru       1024  1.71Gb
@@ -71,26 +71,26 @@ df_test  = pd.read_csv(os.path.join(DIR_DATA, 'test.csv'))#, index_col= 0)
 
 
 
-# In[7]:
+# In[ ]:
 
 
 # should try and without it
 clean_text = lambda x:' '.join(re.sub('\n|\r|\t|[^а-я]', ' ', x.lower()).split())
 
 
-# In[8]:
+# In[ ]:
 
 
 x = clean_text(df_train.title[0])
 
 
-# In[9]:
+# In[ ]:
 
 
 x
 
 
-# In[10]:
+# In[ ]:
 
 
 #dir(model)
@@ -98,7 +98,7 @@ x
 
 # ## Load model
 
-# In[11]:
+# In[ ]:
 
 
 #PRE_TRAINED_MODEL_NAME = 'blanchefort/rubert-base-cased-sentiment-rurewiews'
@@ -114,7 +114,7 @@ MODEL_FOLDER = 'rubert-base-cased-sentence'
 MAX_LENGTH = 24
 
 
-# In[12]:
+# In[ ]:
 
 
 tokenizer = AutoTokenizer.from_pretrained(PRE_TRAINED_MODEL_NAME)
@@ -129,7 +129,7 @@ model = AutoModel.from_pretrained(PRE_TRAINED_MODEL_NAME)
 #model = AutoModelForSequenceClassification.from_pretrained(PRE_TRAINED_MODEL_NAME,) 
 
 
-# In[13]:
+# In[ ]:
 
 
 #Mean Pooling - Take attention mask into account for correct averaging
@@ -147,7 +147,7 @@ def mean_pooling(model_output, attention_mask):
 
 
 
-# In[14]:
+# In[ ]:
 
 
 def ttl_to_emb(inp_text):
@@ -164,44 +164,44 @@ def ttl_to_emb(inp_text):
 
 # ## Make embedings for titles. Train
 
-# In[15]:
+# In[ ]:
 
 
 df_train = df_train[['document_id', 'title']]
 
 
-# In[16]:
+# In[ ]:
 
 
 df_train['ttl_emb'] = df_train.title.progress_apply(lambda x: ttl_to_emb(x))
 
 
-# In[17]:
+# In[ ]:
 
 
 col_names = [f'tt_emb{idx}' for idx in range(df_train.ttl_emb[0].shape[0])]
 emb_train = pd.DataFrame(df_train.ttl_emb.to_list(), columns = col_names)
 
 
-# In[18]:
+# In[ ]:
 
 
 df_train = pd.concat([df_train, emb_train], axis=1)
 
 
-# In[19]:
+# In[ ]:
 
 
 df_train.drop('ttl_emb', axis = 1, inplace = True)
 
 
-# In[20]:
+# In[ ]:
 
 
 df_train.head(3)
 
 
-# In[21]:
+# In[ ]:
 
 
 df_train.to_csv(os.path.join(DIR_DATA, f'ttl_emb_train_{MODEL_FOLDER}_{MAX_LENGTH}.csv'), index = False)
@@ -221,44 +221,44 @@ df_train.to_csv(os.path.join(DIR_DATA, f'ttl_emb_train_{MODEL_FOLDER}_{MAX_LENGT
 
 # ## Same with test
 
-# In[22]:
+# In[ ]:
 
 
 df_test = df_test[['document_id', 'title']]
 
 
-# In[23]:
+# In[ ]:
 
 
 df_test['ttl_emb'] = df_test.title.progress_apply(lambda x: ttl_to_emb(x))
 
 
-# In[24]:
+# In[ ]:
 
 
 col_names = [f'tt_emb{idx}' for idx in range(df_test.ttl_emb[0].shape[0])]
 emb_test = pd.DataFrame(df_test.ttl_emb.to_list(), columns = col_names)
 
 
-# In[25]:
+# In[ ]:
 
 
 df_test = pd.concat([df_test, emb_test], axis=1)
 
 
-# In[26]:
+# In[ ]:
 
 
 df_test.drop('ttl_emb', axis = 1, inplace = True)
 
 
-# In[27]:
+# In[ ]:
 
 
 df_test.shape
 
 
-# In[28]:
+# In[ ]:
 
 
 df_test.to_csv(os.path.join(DIR_DATA, f'ttl_emb_test_{MODEL_FOLDER}_{MAX_LENGTH}.csv'), index = False)

@@ -1,19 +1,19 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[1]:
+# In[ ]:
 
 
 get_ipython().run_line_magic('load_ext', 'watermark')
 
 
-# In[2]:
+# In[ ]:
 
 
 get_ipython().run_line_magic('watermark', '')
 
 
-# In[3]:
+# In[ ]:
 
 
 import os
@@ -27,7 +27,7 @@ from sklearn.metrics import r2_score
 from sklearn import preprocessing
 
 
-# In[4]:
+# In[ ]:
 
 
 from xgboost import __version__ as xgb_version
@@ -37,7 +37,7 @@ print(f'xgb_version: {xgb_version}')
 print(f'sklearn_version: {sklearn_version}')
 
 
-# In[5]:
+# In[ ]:
 
 
 get_ipython().run_line_magic('watermark', '--iversions')
@@ -51,7 +51,7 @@ get_ipython().run_line_magic('watermark', '--iversions')
 
 # ## Reproducibility block
 
-# In[6]:
+# In[ ]:
 
 
 # seed the RNG for all devices (both CPU and CUDA)
@@ -80,7 +80,7 @@ XGB_RANDOMSEED = 56
 
 
 
-# In[7]:
+# In[ ]:
 
 
 DIR_DATA   = os.path.join(os.getcwd(), 'data')
@@ -97,7 +97,7 @@ DIR_SUBM_PART = os.path.join(os.getcwd(), 'subm', 'partial')
 
 # ## Load data
 
-# In[8]:
+# In[ ]:
 
 
 x_train  = pd.read_csv(os.path.join(DIR_DATA, 'x_train.csv'), index_col= 0)
@@ -109,9 +109,12 @@ with open(os.path.join(DIR_DATA, 'cat_columns.pkl'), 'rb') as pickle_file:
     
 with open(os.path.join(DIR_DATA, 'num_columns.pkl'), 'rb') as pickle_file:
     num_cols = pkl.load(pickle_file)
+    
+with open(os.path.join(DIR_DATA, 'clmns.pkl'), 'rb') as pickle_file:
+    clmns = pkl.load(pickle_file)
 
 
-# In[9]:
+# In[ ]:
 
 
 x_train.shape, x_val.shape, df_test.shape, len(cat_cols), len(num_cols)
@@ -119,7 +122,7 @@ x_train.shape, x_val.shape, df_test.shape, len(cat_cols), len(num_cols)
 
 # отделяем метки от данных
 
-# In[10]:
+# In[ ]:
 
 
 y_train = x_train[['views', 'depth', 'full_reads_percent']]
@@ -131,16 +134,30 @@ x_val.drop(  ['views', 'depth', 'full_reads_percent'], axis = 1, inplace = True)
 x_train.shape, x_val.shape, y_train.shape, y_val.shape
 
 
-# In[11]:
+# In[ ]:
 
 
 #cat_cols + num_cols
 
 
-# In[12]:
+# In[ ]:
 
 
-#num_cols = ['ctr']#, 'weekend']
+cat_cols = []
+num_cols = []
+
+for el in clmns.keys():
+    cat_cols.extend(clmns[el]['cat'])
+    num_cols.extend(clmns[el]['num'])
+    if len(clmns[el]['both']) != 0:
+        print(clmns[el]['both'])
+
+
+# In[ ]:
+
+
+num_cols.extend(['hour', 'mounth', 'dow'])
+#cat_cols.extend(['dow'])
 
 
 # In[ ]:
@@ -149,7 +166,7 @@ x_train.shape, x_val.shape, y_train.shape, y_val.shape
 
 
 
-# In[13]:
+# In[ ]:
 
 
 def plot_importance(inp_model, imp_number = 30, imp_type = 'weight'):
@@ -169,7 +186,7 @@ def plot_importance(inp_model, imp_number = 30, imp_type = 'weight'):
 
 # ## views
 
-# In[14]:
+# In[ ]:
 
 
 xgb_model_views = XGBRegressor(n_estimators=1000, 
@@ -194,7 +211,7 @@ xgb_model_views.fit(x_train[num_cols], y_train['views'],
 
 
 
-# In[15]:
+# In[ ]:
 
 
 # Get predictions and metrics
@@ -213,7 +230,7 @@ train_score_views, val_score_views
 
 
 
-# In[16]:
+# In[ ]:
 
 
 plot_importance(xgb_model_views, 30, 'weight')
@@ -227,7 +244,7 @@ plot_importance(xgb_model_views, 30, 'weight')
 
 # ## depth
 
-# In[17]:
+# In[ ]:
 
 
 xgb_model_depth = XGBRegressor(n_estimators=1000, 
@@ -246,7 +263,7 @@ xgb_model_depth.fit(x_train[num_cols], y_train['depth'],
                    )
 
 
-# In[18]:
+# In[ ]:
 
 
 # Get predictions and metrics
@@ -265,7 +282,7 @@ train_score_depth, val_score_depth
 
 
 
-# In[19]:
+# In[ ]:
 
 
 plot_importance(xgb_model_depth, 30, 'weight')
@@ -279,7 +296,7 @@ plot_importance(xgb_model_depth, 30, 'weight')
 
 # ## full_reads_percent
 
-# In[20]:
+# In[ ]:
 
 
 #pd.DataFrame(preds_train_depth, columns = ['depth_pred'])
@@ -289,17 +306,11 @@ pred_depth_train = pd.DataFrame(tmp, columns = ['depth_pred'])
 
 pred_depth_val   = pd.DataFrame(pred_scaler.transform(preds_val_depth.reshape(-1, 1)), columns = ['depth_pred'])
 
-
-# In[22]:
-
-
 print('before ', x_train.shape, x_val.shape, preds_train_depth.shape, preds_val_depth.shape)
 x_train = pd.concat([x_train, pred_depth_train], axis = 1)
 x_val   = pd.concat([x_val,   pred_depth_val],   axis = 1)
 print('after  ', x_train.shape, x_val.shape)
-
-
-# In[21]:
+# In[ ]:
 
 
 xgb_model_frp = XGBRegressor(n_estimators=1000, 
@@ -370,7 +381,7 @@ score_train, score_val
 # In[ ]:
 
 
-NTRY = 6
+NTRY = 7
 
 
 # ## save models
@@ -378,13 +389,13 @@ NTRY = 6
 # In[ ]:
 
 
-xgb_model_views.save_model(os.path.join(DIR_MODELS, f'{NTRY}_1_xgb_views.json'), 
+xgb_model_views.save_model(os.path.join(DIR_MODELS, f'{NTRY}_xgb_views.json'), 
                           )
 
-xgb_model_depth.save_model(os.path.join(DIR_MODELS, f'{NTRY}_1_xgb_depth.json'), 
+xgb_model_depth.save_model(os.path.join(DIR_MODELS, f'{NTRY}_xgb_depth.json'), 
                           )
 
-xgb_model_frp.save_model(os.path.join(DIR_MODELS, f'{NTRY}_1_xgb_frp.json'), 
+xgb_model_frp.save_model(os.path.join(DIR_MODELS, f'{NTRY}_xgb_frp.json'), 
                         )
 
 
@@ -424,7 +435,7 @@ subm.head()
 # In[ ]:
 
 
-subm.to_csv(os.path.join(DIR_SUBM, f'{NTRY}_1_xgb_lags_emb_dp.csv'), index = False)
+subm.to_csv(os.path.join(DIR_SUBM, f'{NTRY}_xgb_lags_emb.csv'), index = False)
 
 
 # In[ ]:
