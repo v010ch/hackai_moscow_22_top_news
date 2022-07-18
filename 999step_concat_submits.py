@@ -43,7 +43,7 @@ DIR_SUBM_PART = os.path.join(os.getcwd(), 'subm', 'partial')
 # In[3]:
 
 
-NTRY = 14
+NTRY = 15
 #NAME = f'{NTRY}_cb_pca64_sber_lags_parse_bord_nose'
 NAME_CB  = f'{NTRY}_cb_pca64_sber_lags_parse_bord_nose'
 NAME_XGB = f'{NTRY}_xgb_pca64_sber_lags_parse_bord_nose'
@@ -62,8 +62,8 @@ NAME_LGB = f'{NTRY}_lgb_pca64_sber_lags_parse_bord_nose'
 
 
 subm_views = pd.read_csv(os.path.join(DIR_SUBM, f'1_xgb_baseline_test.csv'),  usecols=['document_id', 'views'])
-subm_depth = pd.read_csv(os.path.join(DIR_SUBM, f'{NTRY}_lgb_pca64_sber_lags_parse_bord_nose.csv'), usecols=['document_id', 'depth'])
-subm_frp   = pd.read_csv(os.path.join(DIR_SUBM, f'{NTRY}_lgb_pca64_sber_lags_parse_bord_nose.csv'), usecols=['document_id', 'full_reads_percent'])
+subm_depth = pd.read_csv(os.path.join(DIR_SUBM, f'{NTRY}_lgb_pca64_sber_lags_parse_bord_nose_irq.csv'), usecols=['document_id', 'depth'])
+subm_frp   = pd.read_csv(os.path.join(DIR_SUBM, f'{NTRY}_lgb_pca64_sber_lags_parse_bord_nose_irq.csv'), usecols=['document_id', 'full_reads_percent'])
 print(subm_views.shape, subm_depth.shape, subm_frp.shape)
 
 
@@ -111,7 +111,7 @@ lgb_train = pd.read_csv(os.path.join(DIR_SUBM_PART, f'{NAME_LGB}_train_part.csv'
 lgb_val = pd.read_csv(os.path.join(DIR_SUBM_PART, f'{NAME_LGB}_val_part.csv'))
 
 
-# In[8]:
+# In[ ]:
 
 
 print('before ', cb_train.shape, lgb_train.shape, xgb_train.shape)
@@ -150,13 +150,13 @@ print('after ', train.shape)
 print('after ', val.shape)
 
 
-# In[9]:
+# In[ ]:
 
 
 val.columns
 
 
-# In[10]:
+# In[ ]:
 
 
 def plot_corrc(inp_df, inp_cols, targ_cols = ['views', 'depth', 'full_reads_percent']):
@@ -175,7 +175,7 @@ def plot_corrc(inp_df, inp_cols, targ_cols = ['views', 'depth', 'full_reads_perc
     sns.pairplot(inp_df[inp_cols + targ_cols], height = 16,) #hue = 'c2')
 
 
-# In[11]:
+# In[ ]:
 
 
 #plot_corrc(train, ['views'], ['views_pred_cb'])
@@ -183,7 +183,7 @@ def plot_corrc(inp_df, inp_cols, targ_cols = ['views', 'depth', 'full_reads_perc
 #plot_corrc(train, ['views'], ['views_pred_lgb'])
 
 
-# In[12]:
+# In[ ]:
 
 
 #plot_corrc(train, ['depth'], ['depth_pred_cb'])

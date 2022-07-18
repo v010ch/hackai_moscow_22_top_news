@@ -187,6 +187,20 @@ def clear_data(inp_df: pd.DataFrame, min_time: pd.Timestamp) -> pd.DataFrame:
         print(f'shape after frp time {inp_df.shape}')
                               
     
+    Q1_v = inp_df['views'].quantile(0.25)
+    Q3_v = inp_df['views'].quantile(0.75)
+    IQR_v = Q3_v - Q1_v
+    Q1_d = inp_df['depth'].quantile(0.25)
+    Q3_d = inp_df['depth'].quantile(0.75)
+    IQR_d = Q3_d - Q1_d
+    Q1_f = inp_df['full_reads_percent'].quantile(0.25)
+    Q3_f = inp_df['full_reads_percent'].quantile(0.75)
+    IQR_f = Q3_f - Q1_f
+    
+    inp_df = inp_df.query('(@Q1_v - 1.5 * @IQR_v) <= views <= (@Q3_v + 1.5 * @IQR_v)')
+    inp_df = inp_df.query('(@Q1_d - 1.5 * @IQR_d) <= depth <= (@Q3_d + 1.5 * @IQR_d)')
+    inp_df = inp_df.query('(@Q1_f - 1.5 * @IQR_f) <= full_reads_percent <= (@Q3_f + 1.5 * @IQR_f)')
+    
     return inp_df
 
 
@@ -660,20 +674,36 @@ def add_author_statistics(inp_df):
         
         # если авторо больше одного будем выбират средние/мин/макс наченяи среди них
         for el in inp_df[0]:
-            tmp = df_author[df_author.author == el]
-            ret_np = [ret_np[0]  + tmp.v_auth_min.values[0],
-                      ret_np[1]  + tmp.v_auth_max.values[0],
-                      ret_np[2]  + tmp.v_auth_mean.values[0],
-                      ret_np[3]  + tmp.v_auth_std.values[0],
-                      ret_np[4]  + tmp.d_auth_min.values[0],
-                      ret_np[5]  + tmp.d_auth_max.values[0],
-                      ret_np[6]  + tmp.d_auth_mean.values[0],
-                      ret_np[7]  + tmp.d_auth_std.values[0],
-                      ret_np[8]  + tmp.f_auth_min.values[0],
-                      ret_np[9]  + tmp.f_auth_max.values[0],
-                      ret_np[10] + tmp.f_auth_mean.values[0],
-                      ret_np[11] + tmp.f_auth_std.values[0]
-                     ]
+            if el in df_author.author.values:
+                tmp = df_author[df_author.author == el]
+                ret_np = [ret_np[0]  + tmp.v_auth_min.values[0],
+                          ret_np[1]  + tmp.v_auth_max.values[0],
+                          ret_np[2]  + tmp.v_auth_mean.values[0],
+                          ret_np[3]  + tmp.v_auth_std.values[0],
+                          ret_np[4]  + tmp.d_auth_min.values[0],
+                          ret_np[5]  + tmp.d_auth_max.values[0],
+                          ret_np[6]  + tmp.d_auth_mean.values[0],
+                          ret_np[7]  + tmp.d_auth_std.values[0],
+                          ret_np[8]  + tmp.f_auth_min.values[0],
+                          ret_np[9]  + tmp.f_auth_max.values[0],
+                          ret_np[10] + tmp.f_auth_mean.values[0],
+                          ret_np[11] + tmp.f_auth_std.values[0]
+                         ]
+            else: # aouthor in test out from train
+                ret_np = [ret_np[0]  + 0,
+                          ret_np[1]  + 0,
+                          ret_np[2]  + 0,
+                          ret_np[3]  + 0,
+                          ret_np[4]  + 0,
+                          ret_np[5]  + 0,
+                          ret_np[6]  + 0,
+                          ret_np[7]  + 0,
+                          ret_np[8]  + 0,
+                          ret_np[9]  + 0,
+                          ret_np[10] + 0,
+                          ret_np[11] + 0
+                         ]
+                
         #№ пока только среднее
         ret_np = [ret_np[0]  / divisor,   # v_auth_min OR MIN
                   ret_np[1]  / divisor,   # v_auth_max OR MAX

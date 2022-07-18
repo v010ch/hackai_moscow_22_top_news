@@ -3,7 +3,7 @@
 
 # ## Загрузим нужные библиотеки
 
-# In[ ]:
+# In[1]:
 
 
 import os
@@ -14,7 +14,7 @@ import re
 from ast import literal_eval
 
 
-# In[ ]:
+# In[2]:
 
 
 #import plotly.express as px
@@ -30,7 +30,7 @@ plt.rcParams['figure.figsize']=(30,16)
 
 # ### Reproducibility block
 
-# In[ ]:
+# In[3]:
 
 
 # seed the RNG for all devices (both CPU and CUDA)
@@ -62,7 +62,7 @@ np.random.seed(62185)
 
 
 
-# In[ ]:
+# In[4]:
 
 
 def plot_hists_sns(inp_df, inp_feature):
@@ -144,7 +144,7 @@ def plot_hists_sns(inp_df, inp_feature):
     fig.show()
 
 
-# In[ ]:
+# In[5]:
 
 
 def plot_corrc(inp_df, inp_cols, targ_cols = ['views', 'depth', 'full_reads_percent']):
@@ -178,7 +178,7 @@ def plot_corrc(inp_df, inp_cols, targ_cols = ['views', 'depth', 'full_reads_perc
 
 # Выполним загрузу датсета
 
-# In[ ]:
+# In[6]:
 
 
 DIR_DATA  = os.path.join(os.getcwd(), 'data')
@@ -193,7 +193,7 @@ DIR_SUBM  = os.path.join(os.getcwd(), 'subm')
 
 
 
-# In[ ]:
+# In[7]:
 
 
 #df_train = pd.read_csv(os.path.join(DIR_DATA, 'train_extended.csv')) #, index_col= 0)
@@ -203,7 +203,7 @@ df_train = pd.read_csv(os.path.join(DIR_DATA, 'train_extended.csv')) #, index_co
 df_test = pd.read_csv(os.path.join(DIR_DATA, 'test_extended.csv'))#, index_col= 0)
 
 
-# In[ ]:
+# In[8]:
 
 
 df_train.columns
@@ -223,13 +223,13 @@ df_train.columns
 
 # # Проанализируем датасет
 
-# In[ ]:
+# In[9]:
 
 
 df_train.info()
 
 
-# In[ ]:
+# In[10]:
 
 
 df_train.describe()
@@ -247,7 +247,7 @@ df_train.describe()
 # ● **category** - категория статьи   
 # ● **tags** - ключевые слова в статье   
 
-# In[ ]:
+# In[11]:
 
 
 df_train.shape, df_train.index.nunique()
@@ -267,40 +267,55 @@ df_train.shape, df_train.index.nunique()
 
 
 
-# In[ ]:
+# In[28]:
 
 
 plot_corrc(df_train, ['views'], ['depth', 'full_reads_percent'])
 
+# Computing IQR
+Q1 = df['nb'].quantile(0.25)
+Q3 = df['nb'].quantile(0.75)
+IQR = Q3 - Q1
 
-# In[ ]:
+# Filtering Values between Q1-1.5IQR and Q3+1.5IQR
+filtered = df.query('(@Q1 - 1.5 * @IQR) <= nb <= (@Q3 + 1.5 * @IQR)')
+# In[13]:
 
 
+Q1_v = df_train['views'].quantile(0.25)
 Q3_v = df_train['views'].quantile(0.75)
-print(Q3_v, df_train[df_train.views > Q3_v].shape)
+IQR_v = Q3_v - Q1_v
+print((Q3_v + 1.5 * IQR_v), df_train[df_train.views > (Q3_v + 1.5 * IQR_v)].shape)
+print((Q3_v + 1.5 * IQR_v), df_train[df_train.views > (Q3_v + 1.75 * IQR_v)].shape)
 
+Q1_d = df_train['depth'].quantile(0.25)
 Q3_d = df_train['depth'].quantile(0.75)
-print(Q3_d, df_train[df_train.depth > Q3_d].shape)
+IQR_d = Q3_d - Q1_d
+print((Q3_d + 1.5 * IQR_d), df_train[df_train.depth > (Q3_d + 1.5 * IQR_d)].shape)
 
+Q1_f = df_train['full_reads_percent'].quantile(0.25)
 Q3_f = df_train['full_reads_percent'].quantile(0.75)
-print(Q3_f, df_train[df_train.full_reads_percent > Q3_f].shape)
+IQR_f = Q3_f - Q1_f
+print((Q3_f + 1.5 * IQR_f), df_train[df_train.full_reads_percent > (Q3_f + 1.5 * IQR_f)].shape)
 
-print(df_train.query('views > @Q3_v and depth > @Q3_d and full_reads_percent > @Q3_f').shape)
-
-
+59475.125 (754, 17)
+59475.125 (676, 17)
+1.2850000000000001 (68, 17)
+62.141625000000005 (32, 17)
 # Ожидаемо views может быть применено как фича для других таргетов.   
 # depth из состоит 2х распределений. необходимы 2 модели.    
 # между frp и двумя головами depth наглядно имеется корреляция.
 
-# данных мало. так что выкидывать по 1700 значений по iqr не вариант. но избавляться от выбросов точно стоит
+# данных мало. так что выкидывать много значений по iqr не факто вариант. но избавляться от выбросов точно стоит.   
+# пробую оба варианта
 
-# In[ ]:
+# In[14]:
 
 
 df_train.views.nlargest(10)
 
 
-# In[ ]:
+# In[15]:
 
 
 df_train.iloc[[2438, 3878], :]
@@ -314,13 +329,13 @@ df_train.iloc[[2438, 3878], :]
 
 
 
-# In[ ]:
+# In[16]:
 
 
 df_train.depth.nlargest(10)
 
 
-# In[ ]:
+# In[17]:
 
 
 df_train.iloc[[214], :].title.values
@@ -328,7 +343,7 @@ df_train.iloc[[214], :].title.values
 
 # странный заголовок для такого depth. для меня выглядит выбросом. уберу из обучающей выборки
 
-# In[ ]:
+# In[18]:
 
 
 #df_train.query('depth >= 1.3').shape
@@ -340,14 +355,14 @@ df_train.iloc[[214], :].title.values
 
 
 
-# In[ ]:
+# In[19]:
 
 
 df_train.full_reads_percent.nlargest(6)
 #df_train.full_reads_percent.nsmallest(10)
 
 
-# In[ ]:
+# In[20]:
 
 
 df_train.iloc[[205], :].title.values
@@ -356,25 +371,25 @@ df_train.iloc[[205], :].title.values
 # более 200 явно шум, даже если приставить, что их кодировали/преобразовывали. отбрасываем
 # 75 тоже ваыглядит шумам на фоне остальных. стоит пробовать как с ним, так и без него   
 
-# In[ ]:
+# In[21]:
 
 
 df_train[df_train.ctr == 6.096][['title', 'ctr', 'text_len', 'views', 'depth', 'full_reads_percent']]
 
 
-# In[ ]:
+# In[22]:
 
 
 df_train[df_train.text_len == 3284][['title', 'ctr', 'text_len', 'views', 'depth', 'full_reads_percent']]
 
 
-# In[ ]:
+# In[23]:
 
 
 df_test[df_test.ctr == 6.096][['title', 'ctr', 'text_len']]
 
 
-# In[ ]:
+# In[24]:
 
 
 df_test[df_test.text_len == 3284][['title', 'ctr', 'text_len']]
@@ -397,7 +412,7 @@ df_test[df_test.text_len == 3284][['title', 'ctr', 'text_len']]
 
 # # !!!! Для анализа без выбросов необходжимо запустить текущай блок. при анализе на выбросы его стоит пропустить
 
-# In[ ]:
+# In[25]:
 
 
 # только для трейна
@@ -423,18 +438,48 @@ def clear_data(inp_df: pd.DataFrame, min_time: pd.Timestamp) -> pd.DataFrame:
     return inp_df
 
 
-# In[ ]:
+# In[26]:
+
+
+def clean_by_irq(inp_df, min_time):
+    
+    exclude_category = {'5e54e2089a7947f63a801742', '552e430f9a79475dd957f8b3', '5e54e22a9a7947f560081ea2' }
+    inp_df = inp_df.query('category not in @exclude_category')
+    print(f'shape after clean category {inp_df.shape}')
+    
+    inp_df['publish_date'] = pd.to_datetime(inp_df['publish_date'])
+    #inp_df = inp_df[inp_df.publish_date >= min_time]
+    inp_df = inp_df.query('publish_date >= @min_time')
+    print(f'shape after min time {inp_df.shape}')
+
+
+    Q1_v = inp_df['views'].quantile(0.25)
+    Q3_v = inp_df['views'].quantile(0.75)
+    IQR_v = Q3_v - Q1_v
+    Q1_d = inp_df['depth'].quantile(0.25)
+    Q3_d = inp_df['depth'].quantile(0.75)
+    IQR_d = Q3_d - Q1_d
+    Q1_f = inp_df['full_reads_percent'].quantile(0.25)
+    Q3_f = inp_df['full_reads_percent'].quantile(0.75)
+    IQR_f = Q3_f - Q1_f
+    
+    inp_df = inp_df.query('(@Q1_v - 1.5 * @IQR_v) <= views <= (@Q3_v + 1.5 * @IQR_v)')
+    inp_df = inp_df.query('(@Q1_d - 1.5 * @IQR_d) <= depth <= (@Q3_d + 1.5 * @IQR_d)')
+    inp_df = inp_df.query('(@Q1_f - 1.5 * @IQR_f) <= full_reads_percent <= (@Q3_f + 1.5 * @IQR_f)')
+    print(f'shape after irq {inp_df.shape}')
+    
+    return inp_df
+
+
+# In[27]:
 
 
 min_test_time = pd.Timestamp('2022-01-01')
+df_train = clean_by_irq(df_train, min_test_time)
+
+min_test_time = pd.Timestamp('2022-01-01')
 df_train = clear_data(df_train, min_test_time)
-
-
 # Посмотрим на получившиеся iqr
-
-# In[ ]:
-
-
 Q3_v = df_train['views'].quantile(0.75)
 print(Q3_v, df_train[df_train.views > Q3_v].shape)
 
@@ -445,8 +490,6 @@ Q3_f = df_train['full_reads_percent'].quantile(0.75)
 print(Q3_f, df_train[df_train.full_reads_percent > Q3_f].shape)
 
 print(df_train.query('views > @Q3_v and depth > @Q3_d and full_reads_percent > @Q3_f').shape)
-
-
 # интересно, что общее число не измеилось. проьую как с этими данными, так и без них
 
 # In[ ]:
