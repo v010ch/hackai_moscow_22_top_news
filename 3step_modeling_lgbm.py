@@ -1,19 +1,19 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[ ]:
+# In[1]:
 
 
 get_ipython().run_line_magic('load_ext', 'watermark')
 
 
-# In[ ]:
+# In[2]:
 
 
 get_ipython().run_line_magic('watermark', '')
 
 
-# In[ ]:
+# In[3]:
 
 
 import os
@@ -30,14 +30,14 @@ import lightgbm as lgb
 from itertools import product
 
 
-# In[ ]:
+# In[4]:
 
 
 from tqdm.auto import tqdm
 tqdm.pandas()
 
 
-# In[ ]:
+# In[5]:
 
 
 #from catboost import __version__ as cb_version
@@ -47,7 +47,7 @@ from sklearn import __version__ as sklearn_version
 print(f'sklearn_version: {sklearn_version}')
 
 
-# In[ ]:
+# In[6]:
 
 
 get_ipython().run_line_magic('watermark', '--iversions')
@@ -67,7 +67,7 @@ get_ipython().run_line_magic('watermark', '--iversions')
 
 # ## Reproducibility block
 
-# In[ ]:
+# In[7]:
 
 
 # seed the RNG for all devices (both CPU and CUDA)
@@ -97,7 +97,7 @@ LGB_RANDOMSEED = 874256
 
 
 
-# In[ ]:
+# In[8]:
 
 
 DIR_DATA   = os.path.join(os.getcwd(), 'data')
@@ -112,9 +112,32 @@ DIR_SUBM_PART = os.path.join(os.getcwd(), 'subm', 'partial')
 
 
 
-# ## Load data
+# In[9]:
+
+
+NTRY = 14
+NAME = f'{NTRY}_lgb_pca64_sber_lags_parse_bord_nose'
+
+
+# In[10]:
+
+
+CTR_UKR = 6.096
+
+VIEWS_UKR = 2554204
+DEPTH_UKR = 1.799
+FPR_UKR = 4.978
+
 
 # In[ ]:
+
+
+
+
+
+# ## Load data
+
+# In[11]:
 
 
 df_train = pd.read_csv(os.path.join(DIR_DATA, 'train_upd.csv'))#, index_col= 0)
@@ -132,7 +155,7 @@ with open(os.path.join(DIR_DATA, 'clmns.pkl'), 'rb') as pickle_file:
     clmns = pkl.load(pickle_file)
 
 
-# In[ ]:
+# In[12]:
 
 
 df_train.shape, df_test.shape, len(cat_cols), len(num_cols), #x_train.shape, x_val.shape,
@@ -143,7 +166,7 @@ y_train = df_train[['views', 'depth', 'full_reads_percent']]
 df_train.drop(['views', 'depth', 'full_reads_percent'], axis = 1, inplace = True)
 
 df_train.shape, y_train.shape
-# In[ ]:
+# In[13]:
 
 
 y_train = x_train[['views', 'depth', 'full_reads_percent']]
@@ -153,19 +176,19 @@ y_val = x_val[['views', 'depth', 'full_reads_percent']]
 x_val.drop(['views', 'depth', 'full_reads_percent'], axis = 1, inplace = True)
 
 
-# In[ ]:
+# In[14]:
 
 
 #cat_cols + num_cols
 
 
-# In[ ]:
+# In[15]:
 
 
 cat_cols = cat_cols + ['category']
 
 
-# In[ ]:
+# In[16]:
 
 
 df_train['category'] = df_train['category'].astype('category')
@@ -174,14 +197,14 @@ x_val['category']    = x_val['category'].astype('category')
 df_test['category']  = df_test['category'].astype('category')
 
 
-# In[ ]:
+# In[17]:
 
 
 #for el in num_cols:
 #    print(el)
 
 
-# In[ ]:
+# In[18]:
 
 
 cat_cols = []
@@ -194,11 +217,15 @@ for el in clmns.keys():
         print(clmns[el]['both'])
 
 
-# In[ ]:
+# In[19]:
 
 
 num_cols.extend(['hour', 'mounth'])
-cat_cols.extend([ 'dow'])
+cat_cols.extend([ 'dow',
+                'ph_report', 'ph_gallery', 'tv_prog', 'online', 'video', 'infogr',
+                 'holiday', 'day_before_holiday', 'day_after_holiday', 'distrib_brdr',
+                 #'spec_event_1',
+                ])
 
 
 # In[ ]:
@@ -223,7 +250,7 @@ lgbm_params =  {
     "min_child_weight":10,
     'zero_as_missing':True
                 }
-# In[ ]:
+# In[20]:
 
 
 def train_lgb_cat(inp_df, inp_vals, inp_category, inp_cat_cols, inp_num_cols):
@@ -289,7 +316,7 @@ def train_lgb_cat(inp_df, inp_vals, inp_category, inp_cat_cols, inp_num_cols):
     return ret_progress
 
 '5409f11ce063da9c8b588a12', '5409f11ce063da9c8b588a13', '5409f11ce063da9c8b588a18', '540d5eafcbb20f2524fc0509', '540d5ecacbb20f2524fc050a', '5433e5decbb20f277b20eca9'
-# In[ ]:
+# In[21]:
 
 
 #progress = train_lgb_cat(df_train, y_train, '5409f11ce063da9c8b588a12', cat_cols, num_cols)
@@ -307,7 +334,7 @@ def train_lgb_cat(inp_df, inp_vals, inp_category, inp_cat_cols, inp_num_cols):
 
 
 
-# In[ ]:
+# In[22]:
 
 
 #with open(os.path.join(DIR_DATA, 'progress.pkl'), 'wb') as pickle_file:
@@ -326,7 +353,7 @@ def train_lgb_cat(inp_df, inp_vals, inp_category, inp_cat_cols, inp_num_cols):
 
 
 
-# In[ ]:
+# In[23]:
 
 
 #lgb_train = lgb.Dataset(x_train, y_train)
@@ -385,7 +412,7 @@ dart, Dropouts meet Multiple Additive Regression Trees
 goss, Gradient-based One-Side Sampling
 # ## views
 
-# In[ ]:
+# In[24]:
 
 
 # defining parameters 
@@ -409,7 +436,7 @@ params = {
 }
 
 
-# In[ ]:
+# In[25]:
 
 
 score = lgb.cv(params, 
@@ -423,14 +450,8 @@ score = lgb.cv(params,
                 )
 print(np.argmin(score['rmse-mean']), score['rmse-mean'][np.argmin(score['rmse-mean'])], score['rmse-stdv'][np.argmin(score['rmse-mean'])], )
 
-
-# In[ ]:
-
-
-
-
-
-# In[ ]:
+1661 48897.91696678655 9179.139175918961
+# In[26]:
 
 
 # fitting the model
@@ -442,7 +463,7 @@ lgb_model_views = lgb.train(params,
                            )
 
 
-# In[ ]:
+# In[27]:
 
 
 # Get predictions and metrics
@@ -461,7 +482,7 @@ train_score_views, val_score_views
 
 
 
-# In[ ]:
+# In[28]:
 
 
 lgb.plot_importance(lgb_model_views, max_num_features = 30, figsize = (30, 16), importance_type = 'gain')
@@ -484,7 +505,7 @@ lgb.plot_importance(lgb_model_views, max_num_features = 30, figsize = (30, 16), 
 
 # ## depth
 
-# In[ ]:
+# In[29]:
 
 
 # defining parameters 
@@ -508,7 +529,7 @@ params = {
 }
 
 
-# In[ ]:
+# In[30]:
 
 
 score = lgb.cv(params, 
@@ -522,8 +543,8 @@ score = lgb.cv(params,
                 )
 print(np.argmin(score['rmse-mean']), score['rmse-mean'][np.argmin(score['rmse-mean'])], score['rmse-stdv'][np.argmin(score['rmse-mean'])], )
 
-527 0.033012107561271466 0.0030376669191820643 0.05
-# In[ ]:
+378 0.02735314197033909 0.0009451007887406206
+# In[31]:
 
 
 # fitting the model
@@ -535,7 +556,7 @@ lgb_model_depth = lgb.train(params,
                            )
 
 
-# In[ ]:
+# In[32]:
 
 
 # Get predictions and metrics
@@ -547,14 +568,14 @@ val_score_depth   = r2_score(y_val["depth"],   preds_val_depth)
 
 train_score_depth, val_score_depth
 
-(0.8875488446680709, 0.7536780439636924) emb + lag + nauth + all_norm
+(0.8737760841835236, 0.7723557340558183) emb + pca 64 + lags + nauth + all_norm + parse
 # In[ ]:
 
 
 
 
 
-# In[ ]:
+# In[33]:
 
 
 lgb.plot_importance(lgb_model_depth, max_num_features = 30, figsize = (30, 16), importance_type = 'gain')
@@ -569,7 +590,7 @@ lgb.plot_importance(lgb_model_depth, max_num_features = 30, figsize = (30, 16), 
 
 # ## full_reads_percent
 
-# In[ ]:
+# In[34]:
 
 
 #pd.DataFrame(preds_train_depth, columns = ['depth_pred'])
@@ -583,7 +604,7 @@ print('before ', x_train.shape, x_val.shape, preds_train_depth.shape, preds_val_
 x_train = pd.concat([x_train, pred_depth_train], axis = 1)
 x_val   = pd.concat([x_val,   pred_depth_val],   axis = 1)
 print('after  ', x_train.shape, x_val.shape)
-# In[ ]:
+# In[35]:
 
 
 #x_train.drop(['depth_pred'], axis = 1, inplace = True)
@@ -595,7 +616,7 @@ print('after  ', x_train.shape, x_val.shape)
 
 
 
-# In[ ]:
+# In[36]:
 
 
 #full_reads_percent
@@ -616,7 +637,7 @@ train_frp_full = lgb.Dataset(df_train[cat_cols + num_cols],
                             )
 
 
-# In[ ]:
+# In[37]:
 
 
 score = lgb.cv(params, 
@@ -630,8 +651,8 @@ score = lgb.cv(params,
                 )
 print(np.argmin(score['rmse-mean']), score['rmse-mean'][np.argmin(score['rmse-mean'])], score['rmse-stdv'][np.argmin(score['rmse-mean'])], )
 
-116 6.913873743947444 0.09869780290074098
-# In[ ]:
+163 7.02038356002961 0.1360496068604094   / 116 / 111
+# In[38]:
 
 
 # defining parameters 
@@ -655,7 +676,7 @@ params = {
 }
 
 
-# In[ ]:
+# In[39]:
 
 
 # fitting the model
@@ -667,7 +688,7 @@ lgb_model_frp = lgb.train(params,
                            )
 
 
-# In[ ]:
+# In[40]:
 
 
 # Get predictions and metrics
@@ -683,14 +704,14 @@ val_score_frp   = r2_score(y_val["full_reads_percent"],   preds_val_frp)
 
 train_score_frp, val_score_frp
 
-(0.5511975085483092, 0.38191593838301585) emb + lag + nauth + all_norm
+(0.6691482290489612, 0.5600576117433922) emb + pca 64 + lags + nauth + all_norm + parse
 # In[ ]:
 
 
 
 
 
-# In[ ]:
+# In[41]:
 
 
 lgb.plot_importance(lgb_model_frp, max_num_features = 30, figsize = (30, 16), importance_type = 'gain')
@@ -709,7 +730,7 @@ lgb.plot_importance(lgb_model_frp, max_num_features = 30, figsize = (30, 16), im
 
 
 
-# In[ ]:
+# In[42]:
 
 
 score_train = 0.4 * train_score_views + 0.3 * train_score_depth + 0.3 * train_score_frp
@@ -724,20 +745,53 @@ score_train, score_val
 
 
 
+# # Сохраняем предсказания для ансамблей / стекинга
+
+# In[43]:
+
+
+x_train_pred = x_train[['document_id']]
+x_val_pred   = x_val[['document_id']]
+
+print('before ', x_train_pred.shape, preds_train_views.shape, preds_train_depth.shape, preds_train_frp.shape)
+print('before ', x_val_pred.shape,   preds_val_views.shape,   preds_val_depth.shape,   preds_val_frp.shape)
+
+# https://github.com/pandas-dev/pandas/issues/25349
+x_train_pred = pd.concat([x_train_pred.reset_index(drop=True), 
+                          pd.DataFrame(preds_train_views).reset_index(drop = True), 
+                          pd.DataFrame(preds_train_depth).reset_index(drop = True), 
+                          pd.DataFrame(preds_train_frp).reset_index(drop = True)
+                         ], ignore_index = True, axis = 1)
+x_val_pred   = pd.concat([x_val_pred.reset_index(drop=True),   
+                          pd.DataFrame(preds_val_views).reset_index(drop = True), 
+                          pd.DataFrame(preds_val_depth).reset_index(drop = True), 
+                          pd.DataFrame(preds_val_frp).reset_index(drop = True)
+                         ], ignore_index = True, axis = 1)
+
+x_train_pred.columns = ['document_id', 'views_pred_lgb', 'depth_pred_lgb', 'frp_pred_lgb']
+x_val_pred.columns   = ['document_id', 'views_pred_lgb', 'depth_pred_lgb', 'frp_pred_lgb']
+
+print('after ', x_train_pred.shape)
+print('after ', x_val_pred.shape)
+
+x_train_pred.to_csv(os.path.join(DIR_SUBM_PART, f'{NAME}_train_part.csv'), index = False)
+x_val_pred.to_csv(os.path.join(DIR_SUBM_PART, f'{NAME}_val_part.csv'), index = False)
+
+
 # In[ ]:
 
 
-NTRY = 7
+
 
 
 # ## save models
 
-# In[ ]:
+# In[44]:
 
 
-lgb_model_views.save_model(os.path.join(DIR_MODELS, f'{NTRY}_lgm_views.txt'), num_iteration = lgb_model_views.best_iteration)
-lgb_model_depth.save_model(os.path.join(DIR_MODELS, f'{NTRY}_lgm_depth.txt'), num_iteration = lgb_model_depth.best_iteration)
-lgb_model_frp.save_model(  os.path.join(DIR_MODELS, f'{NTRY}_lgm_frp.txt'),   num_iteration = lgb_model_frp.best_iteration)
+lgb_model_views.save_model(os.path.join(DIR_MODELS, f'{NAME}_v.txt'), num_iteration = lgb_model_views.best_iteration)
+lgb_model_depth.save_model(os.path.join(DIR_MODELS, f'{NAME}_d.txt'), num_iteration = lgb_model_depth.best_iteration)
+lgb_model_frp.save_model(  os.path.join(DIR_MODELS, f'{NAME}_f.txt'),   num_iteration = lgb_model_frp.best_iteration)
 
 
 # In[ ]:
@@ -748,7 +802,7 @@ lgb_model_frp.save_model(  os.path.join(DIR_MODELS, f'{NTRY}_lgm_frp.txt'),   nu
 
 # ## make predict
 
-# In[ ]:
+# In[45]:
 
 
 pred_views = lgb_model_views.predict(df_test[cat_cols + num_cols])
@@ -756,7 +810,7 @@ pred_depth = lgb_model_depth.predict(df_test[cat_cols + num_cols])
 pred_frp   = lgb_model_frp.predict(  df_test[cat_cols + num_cols])
 
 
-# In[ ]:
+# In[46]:
 
 
 subm = pd.DataFrame()
@@ -767,16 +821,40 @@ subm['depth'] = pred_depth
 subm['full_reads_percent'] = pred_frp
 
 
-# In[ ]:
+# In[47]:
+
+
+doc_id_ukr = df_test[df_test.ctr == CTR_UKR].document_id.values
+subm.query('document_id in @doc_id_ukr')[['views', 'depth', 'full_reads_percent']]
+
+
+# In[48]:
+
+
+# присваиваем статичные данные
+subm.loc[subm.query('document_id in @doc_id_ukr').index, 'views'] = VIEWS_UKR
+subm.loc[subm.query('document_id in @doc_id_ukr').index, 'depth'] = DEPTH_UKR
+subm.loc[subm.query('document_id in @doc_id_ukr').index, 'full_reads_percent'] = FPR_UKR
+
+subm.query('document_id in @doc_id_ukr')[['views', 'depth', 'full_reads_percent']]
+
+
+# In[49]:
 
 
 subm.head()
 
 
+# In[50]:
+
+
+subm.to_csv(os.path.join(DIR_SUBM, f'{NAME}.csv'), index = False)
+
+
 # In[ ]:
 
 
-subm.to_csv(os.path.join(DIR_SUBM, f'{NTRY}_lgb_ttl_emb_depth_frp.csv'), index = False)
+
 
 
 # In[ ]:

@@ -3,7 +3,7 @@
 
 # ## Загрузим нужные библиотеки
 
-# In[1]:
+# In[ ]:
 
 
 import os
@@ -14,7 +14,7 @@ import re
 from ast import literal_eval
 
 
-# In[2]:
+# In[ ]:
 
 
 #import plotly.express as px
@@ -23,12 +23,14 @@ import seaborn as sns
 from matplotlib import pyplot as plt
 sns.set(rc={'figure.figsize':(30,16)}) # Setting seaborn as default style even if use only matplotlib
 sns.set(font_scale = 2)
+sns.color_palette("dark", 8)
+
 plt.rcParams['figure.figsize']=(30,16)
 
 
 # ### Reproducibility block
 
-# In[3]:
+# In[ ]:
 
 
 # seed the RNG for all devices (both CPU and CUDA)
@@ -60,7 +62,7 @@ np.random.seed(62185)
 
 
 
-# In[4]:
+# In[ ]:
 
 
 def plot_hists_sns(inp_df, inp_feature):
@@ -142,23 +144,30 @@ def plot_hists_sns(inp_df, inp_feature):
     fig.show()
 
 
-# In[5]:
+# In[ ]:
 
 
 def plot_corrc(inp_df, inp_cols, targ_cols = ['views', 'depth', 'full_reads_percent']):
     f, ax = plt.subplots(1, 2, figsize=(24, 8))
-    sns.heatmap(df_train[inp_cols + targ_cols].corr(), 
-    #sns.heatmap(df_train.query('c2 == 0')[inp_cols + targ_cols].corr(), 
+    sns.heatmap(inp_df[inp_cols + targ_cols].corr(), 
+    #sns.heatmap(inp_df.query('c2 == 0')[inp_cols + targ_cols].corr(), 
                 annot = True, cmap= 'coolwarm', linewidths=3, linecolor='black', ax = ax[0])
-    sns.heatmap(df_train[inp_cols + targ_cols].corr(method = 'spearman'), 
-    #sns.heatmap(df_train.query('c2 == 1')[inp_cols + targ_cols].corr(), 
+    sns.heatmap(inp_df[inp_cols + targ_cols].corr(method = 'spearman'), 
+    #sns.heatmap(inp_df.query('c2 == 1')[inp_cols + targ_cols].corr(), 
                 annot = True, cmap= 'coolwarm', linewidths=3, linecolor='black', ax = ax[1])
-#    sns.heatmap(df_train.query('c2 == 0')[inp_cols + targ_cols].corr(method = 'spearman'), 
+#    sns.heatmap(inp_df.query('c2 == 0')[inp_cols + targ_cols].corr(method = 'spearman'), 
 #                annot = True, cmap= 'coolwarm', linewidths=3, linecolor='black', ax = ax[1, 0])
-#    sns.heatmap(df_train.query('c2 == 1')[inp_cols + targ_cols].corr(method = 'spearman'), 
+#    sns.heatmap(inp_df.query('c2 == 1')[inp_cols + targ_cols].corr(method = 'spearman'), 
 #                annot = True, cmap= 'coolwarm', linewidths=3, linecolor='black', ax = ax[1, 1])
     
-    sns.pairplot(df_train[inp_cols + targ_cols], height = 16,) #hue = 'c2')
+    if 'distrib_brdr' in inp_df.columns:
+        sns.pairplot(inp_df[inp_cols + targ_cols + ['distrib_brdr']], height = 16, 
+                     hue = 'distrib_brdr', #palette = {"A": "C0", "B": "C1"}
+                     #markers = ['x', 'o']
+                    )
+    else:
+        sns.pairplot(inp_df[inp_cols + targ_cols], height = 16, 
+                    )
 
 
 # In[ ]:
@@ -169,7 +178,7 @@ def plot_corrc(inp_df, inp_cols, targ_cols = ['views', 'depth', 'full_reads_perc
 
 # Выполним загрузу датсета
 
-# In[6]:
+# In[ ]:
 
 
 DIR_DATA  = os.path.join(os.getcwd(), 'data')
@@ -184,19 +193,20 @@ DIR_SUBM  = os.path.join(os.getcwd(), 'subm')
 
 
 
-# In[7]:
+# In[ ]:
 
 
-#df_train = pd.read_csv(os.path.join(DIR_DATA, 'train.csv'), index_col= 0)
-df_train = pd.read_csv(os.path.join(DIR_DATA, 'train_depth_classes.csv'))#, index_col= 0)
+#df_train = pd.read_csv(os.path.join(DIR_DATA, 'train_extended.csv')) #, index_col= 0)
+df_train = pd.read_csv(os.path.join(DIR_DATA, 'train_extended.csv')) #, index_col= 0)
 
-df_test = pd.read_csv(os.path.join(DIR_DATA, 'test.csv'))#, index_col= 0)
+#df_test = pd.read_csv(os.path.join(DIR_DATA, 'test_extended.csv'))#, index_col= 0)
+df_test = pd.read_csv(os.path.join(DIR_DATA, 'test_extended.csv'))#, index_col= 0)
 
 
 # In[ ]:
 
 
-
+df_train.columns
 
 
 # In[ ]:
@@ -213,13 +223,13 @@ df_test = pd.read_csv(os.path.join(DIR_DATA, 'test.csv'))#, index_col= 0)
 
 # # Проанализируем датасет
 
-# In[8]:
+# In[ ]:
 
 
 df_train.info()
 
 
-# In[9]:
+# In[ ]:
 
 
 df_train.describe()
@@ -237,16 +247,16 @@ df_train.describe()
 # ● **category** - категория статьи   
 # ● **tags** - ключевые слова в статье   
 
-# In[10]:
+# In[ ]:
 
 
 df_train.shape, df_train.index.nunique()
 
 
-# In[11]:
+# In[ ]:
 
 
-df_train.columns
+
 
 
 # ## Targets
@@ -257,21 +267,90 @@ df_train.columns
 
 
 
-# In[12]:
+# In[ ]:
 
 
 plot_corrc(df_train, ['views'], ['depth', 'full_reads_percent'])
+
+
+# In[ ]:
+
+
+Q3_v = df_train['views'].quantile(0.75)
+print(Q3_v, df_train[df_train.views > Q3_v].shape)
+
+Q3_d = df_train['depth'].quantile(0.75)
+print(Q3_d, df_train[df_train.depth > Q3_d].shape)
+
+Q3_f = df_train['full_reads_percent'].quantile(0.75)
+print(Q3_f, df_train[df_train.full_reads_percent > Q3_f].shape)
+
+print(df_train.query('views > @Q3_v and depth > @Q3_d and full_reads_percent > @Q3_f').shape)
 
 
 # Ожидаемо views может быть применено как фича для других таргетов.   
 # depth из состоит 2х распределений. необходимы 2 модели.    
 # между frp и двумя головами depth наглядно имеется корреляция.
 
-# In[167]:
+# данных мало. так что выкидывать по 1700 значений по iqr не вариант. но избавляться от выбросов точно стоит
+
+# In[ ]:
+
+
+df_train.views.nlargest(10)
+
+
+# In[ ]:
+
+
+df_train.iloc[[2438, 3878], :]
+
+
+# 2398050 и 928192 пока для меня выглядят выбросами. попробую как с нимси, так и без
+
+# In[ ]:
+
+
+
+
+
+# In[ ]:
+
+
+df_train.depth.nlargest(10)
+
+
+# In[ ]:
+
+
+df_train.iloc[[214], :].title.values
+
+
+# странный заголовок для такого depth. для меня выглядит выбросом. уберу из обучающей выборки
+
+# In[ ]:
+
+
+#df_train.query('depth >= 1.3').shape
+
+
+# In[ ]:
+
+
+
+
+
+# In[ ]:
 
 
 df_train.full_reads_percent.nlargest(6)
 #df_train.full_reads_percent.nsmallest(10)
+
+
+# In[ ]:
+
+
+df_train.iloc[[205], :].title.values
 
 
 # более 200 явно шум, даже если приставить, что их кодировали/преобразовывали. отбрасываем
@@ -280,7 +359,114 @@ df_train.full_reads_percent.nlargest(6)
 # In[ ]:
 
 
+df_train[df_train.ctr == 6.096][['title', 'ctr', 'text_len', 'views', 'depth', 'full_reads_percent']]
 
+
+# In[ ]:
+
+
+df_train[df_train.text_len == 3284][['title', 'ctr', 'text_len', 'views', 'depth', 'full_reads_percent']]
+
+
+# In[ ]:
+
+
+df_test[df_test.ctr == 6.096][['title', 'ctr', 'text_len']]
+
+
+# In[ ]:
+
+
+df_test[df_test.text_len == 3284][['title', 'ctr', 'text_len']]
+
+
+# единственным критерием, объединяющий тему Украины является ctr. При этом views, depth и full_reads_percent одинаковы, выглядят выбросами.    
+# из обучения стоит убрать. в тесте в данных полях ставить константы.
+
+# In[ ]:
+
+
+
+
+
+# In[ ]:
+
+
+
+
+
+# # !!!! Для анализа без выбросов необходжимо запустить текущай блок. при анализе на выбросы его стоит пропустить
+
+# In[ ]:
+
+
+# только для трейна
+def clear_data(inp_df: pd.DataFrame, min_time: pd.Timestamp) -> pd.DataFrame:
+    
+    exclude_category = {'5e54e2089a7947f63a801742', '552e430f9a79475dd957f8b3', '5e54e22a9a7947f560081ea2' }
+    inp_df = inp_df.query('category not in @exclude_category')
+    print(f'shape after clean category {inp_df.shape}')
+    
+    inp_df['publish_date'] = pd.to_datetime(inp_df['publish_date'])
+    #inp_df = inp_df[inp_df.publish_date >= min_time]
+    inp_df = inp_df.query('publish_date >= @min_time')
+    print(f'shape after min time {inp_df.shape}')
+    
+    inp_df = inp_df.query('ctr != 6.096')
+    print(f'shape after ctr {inp_df.shape}')
+    
+    if 'full_reads_percent' in inp_df.columns:
+        inp_df = inp_df.query('full_reads_percent < 100')
+        print(f'shape after frp time {inp_df.shape}')
+                              
+    
+    return inp_df
+
+
+# In[ ]:
+
+
+min_test_time = pd.Timestamp('2022-01-01')
+df_train = clear_data(df_train, min_test_time)
+
+
+# Посмотрим на получившиеся iqr
+
+# In[ ]:
+
+
+Q3_v = df_train['views'].quantile(0.75)
+print(Q3_v, df_train[df_train.views > Q3_v].shape)
+
+Q3_d = df_train['depth'].quantile(0.75)
+print(Q3_d, df_train[df_train.depth > Q3_d].shape)
+
+Q3_f = df_train['full_reads_percent'].quantile(0.75)
+print(Q3_f, df_train[df_train.full_reads_percent > Q3_f].shape)
+
+print(df_train.query('views > @Q3_v and depth > @Q3_d and full_reads_percent > @Q3_f').shape)
+
+
+# интересно, что общее число не измеилось. проьую как с этими данными, так и без них
+
+# In[ ]:
+
+
+
+
+
+# In[ ]:
+
+
+
+
+
+# теперь посмотрим на таргеты вновь
+
+# In[ ]:
+
+
+plot_corrc(df_train, ['views'], ['depth', 'full_reads_percent'])
 
 
 # In[ ]:
@@ -291,7 +477,7 @@ df_train.full_reads_percent.nlargest(6)
 
 # # publish_date
 
-# In[13]:
+# In[ ]:
 
 
 df_train['publish_date'] = pd.to_datetime(df_train['publish_date'])
@@ -306,8 +492,10 @@ df_train['weekend'] = (df_train.dow >= 4) # 5
 df_train['day'] = pd.to_datetime(df_train['publish_date']).dt.strftime("%d").astype(int)
 df_train['mounth'] = pd.to_datetime(df_train['publish_date']).dt.strftime("%m").astype(int)
 
+df_train['distrib_brdr'] = df_train.m_d.apply(lambda x: 1 if x < border else 0)
 
-# In[14]:
+
+# In[ ]:
 
 
 df_test['publish_date'] = pd.to_datetime(df_test['publish_date'])
@@ -315,37 +503,37 @@ df_test['publish_date'] = pd.to_datetime(df_test['publish_date'])
 
 # проверим границы дат
 
-# In[15]:
+# In[ ]:
 
 
 df_train['publish_date'].min(), df_test['publish_date'].min()
 
 
-# In[16]:
+# In[ ]:
 
 
 df_train['publish_date'].max(), df_test['publish_date'].max()
 
 
-# In[17]:
+# In[ ]:
 
 
 df_train[df_train.publish_date > df_test['publish_date'].min()].shape
 
 
-# In[18]:
+# In[ ]:
 
 
 df_train[df_train.publish_date < df_test['publish_date'].min()].shape
 
 
-# In[19]:
+# In[ ]:
 
 
 #df_train.sort_values(by='publish_date').head(15)
 
 
-# In[20]:
+# In[ ]:
 
 
 #df_test.sort_values(by='publish_date').head(15)
@@ -364,7 +552,7 @@ df_train[df_train.publish_date < df_test['publish_date'].min()].shape
 
 
 
-# In[159]:
+# In[ ]:
 
 
 tmp = (df_train[df_train.publish_date > df_test['publish_date'].min()].sort_values('publish_date').groupby('m_d').agg('size'))
@@ -373,16 +561,16 @@ sns.lineplot(y = tmp.values, x=tmp.keys(), ax = ax)
 
 
 # датасет хотелось бы увеличить, таких данных для добавления лагов недостаточно. однако непонятно откуда брать depth и frp   
-# виден недельный цикл
+# виден недельный цикл в количестве статей
 
-# In[40]:
+# In[ ]:
 
 
 #tmp = df_train[df_train.publish_date > df_test['publish_date'].min()].sort_values('publish_date').groupby('m_d').m_d.diff()
 #sns.lineplot(y = tmp.values, x=tmp.keys())
 
 
-# In[160]:
+# In[ ]:
 
 
 #min_time = pd.Timestamp('2022-01-01')
@@ -394,7 +582,7 @@ fig, ax = plt.subplots(1, 1, figsize = (30, 8))
 sns.lineplot(x = tmp2.values, y = tmp.map(lambda x: x.days).values, ax = ax)
 
 
-# In[153]:
+# In[ ]:
 
 
 tmp2.nunique(), tmp.map(lambda x: x.days).value_counts()
@@ -403,10 +591,42 @@ tmp2.nunique(), tmp.map(lambda x: x.days).value_counts()
 # In[ ]:
 
 
+low = pd.Timestamp('2022-02-21').date()
+hi  = pd.Timestamp('2022-03-13').date()
+df_train.query('m_d > @low and m_d < @hi').m_d.value_counts()
+
+
+# In[ ]:
 
 
 
-# In[149]:
+
+
+# In[ ]:
+
+
+
+
+
+# In[ ]:
+
+
+
+
+
+# In[ ]:
+
+
+
+
+
+# In[ ]:
+
+
+
+
+
+# In[ ]:
 
 
 def plot_means(inp_df: pd.DataFrame, inp_cat: str = 'all'):
@@ -422,6 +642,8 @@ def plot_means(inp_df: pd.DataFrame, inp_cat: str = 'all'):
     fig, ax = plt.subplots(3, 2, figsize=(30, 20))
     
     sns.lineplot(x = tmp.m_d, y = tmp['views'], ax = ax[0, 0])
+    #ax[0, 0] = plt.axvline(border, 0, 40000)
+    #plt.plot([border, border], [ 0, 40000])
     #sns.kdeplot(x = tmp.m_d, y = tmp['views'], ax = ax[0, 1])
     sns.kdeplot(x = tmp['views'], ax = ax[0, 1], bw_adjust = 0.3)
     
@@ -433,25 +655,33 @@ def plot_means(inp_df: pd.DataFrame, inp_cat: str = 'all'):
     #sns.kdeplot(x = tmp.m_d, y = tmp['full_reads_percent'], ax = ax[2, 1])
     sns.kdeplot(x = tmp['full_reads_percent'], ax = ax[2, 1], bw_adjust = 0.3)
     
+    
+    #plt.axvline(2.8, 0,0.17)
 
 
-# In[150]:
+# In[ ]:
 
 
 df_train.category.unique()
 
 
-# In[154]:
+# In[ ]:
 
 
 #min_time = pd.Timestamp('2022-01-01')
 min_time = pd.Timestamp('2022-01-29')
 
 
-# In[157]:
+# In[ ]:
 
 
-plot_means(df_train[df_train.publish_date > min_time], '5433e5decbb20f277b20eca9')
+cat = '5433e5decbb20f277b20eca9' #'5409f11ce063da9c8b588a18' # 
+border = pd.Timestamp('2022-04-08').date()
+#plot_means(df_train.query('m_d > @hi'))
+#plot_means(df_train[df_train.publish_date > min_time], '5433e5decbb20f277b20eca9')
+#plot_means(df_train.query('publish_date > @min_time and m_d < @border'))
+#plot_means(df_train.query('m_d > @border and category == @cat'))
+plot_means(df_train.query('m_d > @border'))
 
 
 # In[ ]:
@@ -466,31 +696,31 @@ plot_means(df_train[df_train.publish_date > min_time], '5433e5decbb20f277b20eca9
 
 
 
-# In[22]:
+# In[ ]:
 
 
 plot_hists_sns(df_train, 'dow')
 
 
-# In[23]:
+# In[ ]:
 
 
 plot_hists_sns(df_train, 'hour')
 
 
-# In[24]:
+# In[ ]:
 
 
 plot_hists_sns(df_train, 'day')
 
 
-# In[25]:
+# In[ ]:
 
 
 plot_hists_sns(df_train, 'mounth')
 
 
-# In[26]:
+# In[ ]:
 
 
 #plot_hists_sns(df_train, 'weekend')
@@ -502,16 +732,55 @@ plot_hists_sns(df_train, 'mounth')
 
 
 
-# In[27]:
+# In[ ]:
 
 
 plot_corrc(df_train, ['hour', 'dow', 'day', 'mounth'],['views', 'depth', 'full_reads_percent']) #'weekend', 
+#plot_corrc(df_train.query('m_d > @border'), ['hour', 'dow', 'day', 'mounth'],['views', 'depth', 'full_reads_percent']) #'weekend', 
 
 
-# In[28]:
+# In[ ]:
 
 
-df_train.columns
+df_train.category.unique()
+
+
+# In[ ]:
+
+
+Z_day = pd.Timestamp('2022-02-23').date()
+
+
+# In[ ]:
+
+
+#plot_corrc(df_train[df_train.publish_date < Z_day], ['views'], ['depth', 'full_reads_percent'])
+#plot_corrc(df_train[df_train.category == '5433e5decbb20f277b20eca9'], ['views'], ['depth', 'full_reads_percent'])
+
+
+# In[ ]:
+
+
+#cat = ['5409f11ce063da9c8b588a18', '5409f11ce063da9c8b588a12','5433e5decbb20f277b20eca9', '540d5ecacbb20f2524fc050a', '540d5eafcbb20f2524fc0509', '5409f11ce063da9c8b588a13']
+#df_train.query('publish_date <= @Z_day and category == @cat[1]').depth.hist(bins = 40)
+
+
+# In[ ]:
+
+
+
+
+
+# In[ ]:
+
+
+(df_train.m_d[0] - Z_day).days
+
+
+# In[ ]:
+
+
+df_train['days_drom_z'] = df_train.m_d.apply()
 
 
 # In[ ]:
@@ -528,25 +797,25 @@ df_train.columns
 
 # # category
 
-# In[12]:
+# In[ ]:
 
 
 df_train.category.nunique(), df_train.category.unique(), 
 
 
-# In[13]:
+# In[ ]:
 
 
 plot_hists_sns(df_train, 'category')
 
 
-# In[14]:
+# In[ ]:
 
 
 df_train.category.value_counts()
 
 
-# In[15]:
+# In[ ]:
 
 
 df_test.category.value_counts()
@@ -554,14 +823,14 @@ df_test.category.value_counts()
 
 # вероятно стоит удалить последние 3 категории, что бы модель не переобучалась на них. к тому же их нет в тесте
 
-# In[16]:
+# In[ ]:
 
 
 exclude_category = {'5e54e2089a7947f63a801742', '552e430f9a79475dd957f8b3', '5e54e22a9a7947f560081ea2' }
 #plot_hists_sns(df_train.query('category in @exclude_category'), 'category')
 
 
-# In[17]:
+# In[ ]:
 
 
 category_decode = {
@@ -615,7 +884,7 @@ category_decode = {
 }
 
 
-# In[18]:
+# In[ ]:
 
 
 df_train[df_train.category == '5e54e22a9a7947f560081ea2'][['document_id', 'publish_date', 'title']]#.sample(5)
@@ -631,13 +900,13 @@ df_train[df_train.category == '5e54e22a9a7947f560081ea2'][['document_id', 'publi
 5e54e2089a7947f63a801742    rbcfreenews / politics
 552e430f9a79475dd957f8b3    money?????????????????
 5e54e22a9a7947f560081ea2    realty / city?
-# In[19]:
+# In[ ]:
 
 
 df_train.iloc[4297].title
 
 
-# In[20]:
+# In[ ]:
 
 
 # 'Захарова предложила Евросоюзу «отменить себя»\n                \n                                                    \n\n    \n\n    Политика,\xa012:28'
@@ -677,21 +946,17 @@ https://www.rbc.ru/society/31/03/2022/6244c29b9a79478f9a339bca
 
 
 
-# In[21]:
+# In[ ]:
 
 
 #clean_text = lambda x:' '.join(re.sub('\n|\r|\t|[^а-я]', ' ', x.lower()).split())
 clean_text = lambda x:' '.join(re.sub('\n|\r|\t|[^а-яА-ЯA-zA-Z]', ' ', x).split())
 
 
-# In[22]:
+# In[ ]:
 
 
 tmp_ttl = 'Захарова предложила Евросоюзу «отменить себя»\n                \n                                                    \n\n    \n\n    Политика,\xa012:28'
-
-
-# In[23]:
-
 
 def find_cat_collisions(inp_df):
     
@@ -705,9 +970,7 @@ def find_cat_collisions(inp_df):
         if tmp.split()[-1] != category_decode[inp_df[1]]['last_word']:
             print(inp_df[0], inp_df[1], inp_df[2], inp_df[3])
             print(tmp.split()[-1], category_decode[inp_df[1]]['name']) 
-
-
-# In[24]:
+# In[ ]:
 
 
 def clean_title(inp_val):
@@ -734,38 +997,38 @@ def clean_title(inp_val):
     return inp_val
 
 
-# In[26]:
+# In[ ]:
 
 
 df_train['title_len_diff'] = df_train.title.apply(lambda x: len(x) - len(clean_text(x)))
 df_test['title_len_diff']  = df_test.title.apply(lambda x: len(x) - len(clean_text(x)))
 
 
-# In[27]:
+# In[ ]:
 
 
 df_train[['document_id', 'category', 'title', 'title_len_diff']].apply(find_cat_collisions, axis = 1)
 
 
-# In[108]:
+# In[ ]:
 
 
 
 
 
-# In[109]:
+# In[ ]:
 
 
 
 
 
-# In[110]:
+# In[ ]:
 
 
 df_train[df_train.title_len_diff > 50].title.sample(10).values
 
 
-# In[77]:
+# In[ ]:
 
 
 # 'Власти Москвы рассказали о ходе работ на Рублево-Архангельской линии\n                \n                                                    \n\n    \n\n    Город,\xa012:03',
@@ -777,7 +1040,7 @@ df_train[df_train.title_len_diff > 50].title.sample(10).values
 
 
 
-# In[125]:
+# In[ ]:
 
 
 df_test[df_test.title_len_diff > 50].title.sample(10).values
@@ -789,9 +1052,21 @@ df_test[df_test.title_len_diff > 50].title.sample(10).values
 
 
 
-# ## authors
+# In[ ]:
 
-# In[17]:
+
+
+
+
+# In[ ]:
+
+
+
+
+
+# # authors
+
+# In[ ]:
 
 
 df_train['authors']  = df_train.authors.apply(lambda x: literal_eval(x))
@@ -801,46 +1076,52 @@ df_test['authors']  = df_test.authors.apply(lambda x: literal_eval(x))
 df_test['Nauthors'] = df_test.authors.apply(lambda x: len(x))
 
 
-# In[18]:
+# In[ ]:
 
 
 df_train['Nauthors'].value_counts()
 
 
-# In[19]:
+# In[ ]:
 
 
 df_test['Nauthors'].value_counts()
 
 
+# In[ ]:
+
+
+#df_train[df_train.Nauthors >= 4].depth.hist(bins = 40)
+
+
 # удивительно, что возможные значения количества авторов в трейне и тесте совпадают. можно использовать как признак  
 # однако значения при > 3 малы, что может привести к переобучению
 
-# In[20]:
+# In[ ]:
 
 
 plot_hists_sns(df_train, 'Nauthors')
 
 
-# In[21]:
+# In[ ]:
 
 
 df_train['Nauthors_upd'] = df_train['Nauthors'].apply(lambda x: x if x < 4 else 4) # 3
 
 
-# In[22]:
+# In[ ]:
 
 
 df_train['Nauthors_upd'].value_counts()
 
 
-# In[23]:
+# In[ ]:
 
 
 plot_hists_sns(df_train, 'Nauthors_upd')
 
 
-# In[24]:
+# In[ ]:
 
 
 all_authors = set()
@@ -855,13 +1136,13 @@ for el in df_train.authors.values:
         all_authors.add(author)
 
 
-# In[25]:
+# In[ ]:
 
 
 len(all_authors)
 
 
-# In[26]:
+# In[ ]:
 
 
 all_authors_test = set()
@@ -876,13 +1157,13 @@ for el in df_test.authors.values:
         all_authors_test.add(author)
 
 
-# In[27]:
+# In[ ]:
 
 
 len(all_authors_test)
 
 
-# In[28]:
+# In[ ]:
 
 
 missed_authors = set()
@@ -891,7 +1172,7 @@ for el in all_authors_test:
         missed_authors.add(el)
 
 
-# In[29]:
+# In[ ]:
 
 
 len(missed_authors)
@@ -899,7 +1180,7 @@ len(missed_authors)
 
 # только 2 (2%) автора не представленны в обучающей выборке
 
-# In[30]:
+# In[ ]:
 
 
 plot_corrc(df_train, ['Nauthors'], ['views', 'depth', 'full_reads_percent'])
@@ -1028,28 +1309,44 @@ len(missed_tags)
 
 # ## ctr
 
-# In[12]:
+# In[ ]:
 
 
-df_train.hist('ctr', bins = 40, figsize=(24, 8))
+df_train.hist('ctr', bins = 80, figsize=(24, 8))
 
 
-# In[13]:
+# In[ ]:
+
+
+(df_train.ctr == 0).sum()
+
+
+# In[ ]:
 
 
 df_train.ctr.min(), df_train.ctr.max()
 
 
-# In[14]:
+# In[ ]:
+
+
+#df_train['crt_bins'] = df_train.crt.
+
+
+# In[ ]:
 
 
 plot_corrc(df_train, ['ctr'], ['views', 'depth', 'full_reads_percent'])
 
 
-# In[16]:
+# In[ ]:
 
 
-#plot_hists_sns(df_train, 'ctr')
+bins = [-0.25 + 0.5*el for el in range(30)] + [40]
+#bins
+df_train['ctr_bins'] = pd.cut(df_train.ctr, bins = bins, labels = bins[:-1])
+
+plot_hists_sns(df_train, 'ctr_bins')
 
 
 # In[ ]:
@@ -1070,6 +1367,30 @@ plot_corrc(df_train, ['ctr'], ['views', 'depth', 'full_reads_percent'])
 
 
 
+# # session
+
+# In[ ]:
+
+
+sess_zip = zip(df_train.groupby('session').agg('size').keys(), df_train.groupby('session').agg('size').values)
+
+
+# In[ ]:
+
+
+size = 0
+for el in sess_zip:
+    if el[1] == 8:
+        print(el[1], el[0])
+        #size += 1
+
+
+# In[ ]:
+
+
+#df_train.groupby('session').agg('size').hist(bins = 20)
+
+
 # In[ ]:
 
 
@@ -1079,11 +1400,111 @@ plot_corrc(df_train, ['ctr'], ['views', 'depth', 'full_reads_percent'])
 # In[ ]:
 
 
-df_train.columns
+
 
 
 # In[ ]:
 
+
+
+
+
+# # text len
+
+# In[ ]:
+
+
+plot_corrc(df_train, ['text_len'], ['views', 'depth', 'full_reads_percent'])
+
+
+# In[ ]:
+
+
+df_train.text_len.min(), df_train.text_len.max(), 
+
+
+# In[ ]:
+
+
+df_train[df_train.text_len > 2000].text_len
+
+
+# In[ ]:
+
+
+df_train.text_len.hist(bins = 40)
+
+
+# In[ ]:
+
+
+df_train[df_train.text_len > 2000]
+
+
+# In[ ]:
+
+
+bins = [-0.25 + 100*el for el in range(34)] + [5000]
+#bins
+df_train['text_len_bins'] = pd.cut(df_train.text_len, bins = bins, labels = bins[:-1])
+
+
+# In[ ]:
+
+
+
+
+
+# In[ ]:
+
+
+plot_hists_sns(df_train, 'text_len_bins')
+
+
+# In[ ]:
+
+
+df_train.text_len.nlargest(10)
+
+
+# In[ ]:
+
+
+df_train.views.nlargest(10)
+
+
+# In[ ]:
+
+
+df_train.iloc[[4183, 5086, 5634, 5951, 6359], :]
+
+
+# In[ ]:
+
+
+df_train.iloc[[4183, 5086, 5634, 5951, 6359], :].title.values
+
+
+# In[ ]:
+
+
+#df_test[[True if 'Главное' in el else False for el in df_test.title.values]].title.values
+df_test[df_test.ctr == 6.096].title.values
+
+
+# In[ ]:
+
+
+
+
+
+# In[ ]:
+
+
+
+
+
+# In[ ]:
 
 
 #df_train['day'] = pd.to_datetime(df_train['publish_date']).dt.strftime("%d").astype(int)

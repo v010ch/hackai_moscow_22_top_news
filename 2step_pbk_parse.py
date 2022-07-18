@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[ ]:
+# In[1]:
 
 
 import os
@@ -26,26 +26,26 @@ import numpy as np
 
 
 
-# In[ ]:
+# In[2]:
 
 
 DIR_DATA = os.path.join(os.getcwd(), 'data')
 
 
-# In[ ]:
+# In[3]:
 
 
-MIN_DELAY = 2.17 #2.673
-MAX_DELAY = 4.8 #7.22 #9.181
-
-
-# In[ ]:
-
-
-
+MIN_DELAY = 2.673 #2.17 #2.673
+MAX_DELAY = 5.386 #4.8 #7.22 #9.181
 
 
 # In[ ]:
+
+
+
+
+
+# In[4]:
 
 
 #LOAD_NUMBER = 0
@@ -58,7 +58,7 @@ MAX_DELAY = 4.8 #7.22 #9.181
 
 
 
-# In[ ]:
+# In[5]:
 
 
 df_train = pd.read_csv(os.path.join(DIR_DATA, 'train.csv'))
@@ -76,7 +76,7 @@ df_train.shape, df_test.shape
 
 
 
-# In[ ]:
+# In[6]:
 
 
 def pauserealuseremulate(numb_load, last_time):
@@ -101,7 +101,7 @@ def pauserealuseremulate(numb_load, last_time):
     return
 
 
-# In[ ]:
+# In[7]:
 
 
 category_decode = {
@@ -188,13 +188,13 @@ https://www.rbc.ru/society/07/02/2022/620099d69a794755aba55d7a
 176
 6244c29b9a79478f9a339bca0RwqdNMOSfeAefxAr_8Wwg
 https://www.rbc.ru/society/31/03/2022/6244c29b9a79478f9a339bca
-# In[ ]:
+# In[8]:
 
 
-clean_text = lambda x:' '.join(re.sub('\n|\r|\t|[^а-я]', ' ', x.lower()).split())
+clean_text = lambda x:' '.join(re.sub('\n|\r|\t|[^а-яА-Яa-zA-Z]', ' ', x).split()) #.lower()
 
 
-# In[ ]:
+# In[9]:
 
 
 def get_article_data(inp_df):
@@ -248,6 +248,61 @@ def get_article_data(inp_df):
     
     return True
 
+
+# In[10]:
+
+
+def check_for_news(inp_df):
+    
+    global load_number
+    global last_load
+    
+    #article = ''
+    
+    #print(inp_df[1])
+    #print(inp_df[1].dt.date.day)
+    date = inp_df[1].strftime('%d/%m/%Y')
+    category = category_decode[inp_df[2]]['link']
+    link_hash = inp_df[0][:24]
+    #print(f'https://www.rbc.ru/{category}/{date}/{link_hash}')
+    url = f'https://www.rbc.ru/{category}/{date}/{link_hash}'
+    driver.get(url)
+    
+    # эмулируем задержки пользователя
+    pauserealuseremulate(load_number, last_load)
+    last_load = time.time()
+    load_number += 1
+    
+    # 404
+    if len(driver.find_elements_by_class_name('error__title')) != 0:
+        # общество может быть объеденено с городом
+        # а политика часто с новостями
+        if inp_df[2] != '5433e5decbb20f277b20eca9':
+            category = 'rbcfreenews'
+            print(f'https://www.rbc.ru/{category}/{link_hash}')
+            url = f'https://www.rbc.ru/{category}/{link_hash}'
+        else:
+            category = 'city'
+            print(f'https://www.rbc.ru/{category}/{date}/{link_hash}')
+            url = f'https://www.rbc.ru/{category}/{date}/{link_hash}'
+            
+        driver.get(url)
+        
+        # эмулируем задержки пользователя
+        pauserealuseremulate(load_number, last_load)
+        last_load = time.time()
+        load_number += 1
+    
+        # документ вне категории и rbcfreenews
+        if len(driver.find_elements_by_class_name('error__title')) != 0:
+            print(inp_df)
+            return 'unknown'
+        else:
+            return category
+            
+    
+    return category
+
 load_number = 0
 last_load = time.time()
 
@@ -257,7 +312,37 @@ last_load = time.time()
 
 driver = webdriver.Firefox(executable_path = "C:\\WebDrivers\\bin\\geckodriver")
 tmp = df_test.loc[:, ['document_id', 'publish_date', 'category']].progress_apply(get_article_data, axis = 1)
-print(sum(tmp))# обычная статья
+print(sum(tmp))
+# In[ ]:
+
+
+load_number = 0
+last_load = time.time()
+
+driver = webdriver.Firefox(executable_path = "C:\\WebDrivers\\bin\\geckodriver")
+df_train['link_part'] = df_train.loc[:, ['document_id', 'publish_date', 'category']].progress_apply(check_for_news, axis = 1)
+
+df_train.to_csv(os.path.join(DIR_DATA, 'train_link.csv'), index = False)
+
+
+# In[ ]:
+
+
+
+
+
+# In[ ]:
+
+
+
+
+
+# In[ ]:
+
+
+
+
+# обычная статья
 #tst_page = '624ac09c9a7947db3d80c98e.html'
 tst_page = '624ac09c9a7947db3d80c98eIDE7mtH4RBqGn-8MXfGffQ.html'
 
@@ -269,13 +354,13 @@ doc_id = [el[:-5] for el in pages]
 
 rbk_data = pd.DataFrame(columns = ['document_id', 'true_title', 'text_overview', 'text', 'true_category'])
 rbk_data['document_id'] = doc_id
-# In[ ]:
+# In[10]:
 
 
 #(page_data.text, features="lxml") # features="lxml" чтобы не было warning
 
 
-# In[ ]:
+# In[11]:
 
 
 def get_article_info(inp_id):
@@ -330,7 +415,7 @@ def get_article_info(inp_id):
         true_title = tmp_group.find_all('h1', attrs = {'class': 'article__header__title-in js-slide-title article__header__title-in_relative'})
         if len(true_title) != 1:
             print(f'{inp_id} something went wrong. true_title {len(true_title)}')            
-    true_title = true_title[0].text.strip()
+    true_title = text = clean_text(true_title[0].text)
 
 
     # article text
@@ -370,23 +455,23 @@ def get_article_info(inp_id):
     #print(overview, '\n')
     #print(text)
     #print(text[0].text)
-    return (true_category, true_title, tmp_imgs, overview, len(text.split()), two_articles, ) #snd_header, snd_text
+    return (true_category, true_title, tmp_imgs, overview, len(text.split()), two_articles, text) #snd_header, snd_text
 
 Фоторепортаж, Фотогалерея, Главное за день, ЧЭЗ, видео, прямая трансляция
-# In[ ]:
+# In[12]:
 
 
 #df_train[df_train.document_id == '626e564d9a79471a3cd5de65ZM028L7kQ1mVIZAB30bTEA'].title.values
 df_test[df_test.document_id == '620a7cbf9a79471a9c6ace46aMuqupFlTxSsa5P6zHzaEQ'].title.values
 
 
-# In[ ]:
+# In[13]:
 
 
 df_train[df_train.document_id == '6210c3939a7947e58a257424iqcwqgm9QXShvP0aU1iVQQ']
 
 
-# In[ ]:
+# In[14]:
 
 
 #620d1f0c9a794724696a95e7igKOAeqwSo6yt6MHdm1JNA something went wrong. text
@@ -417,20 +502,20 @@ df_train[df_train.document_id == '6210c3939a7947e58a257424iqcwqgm9QXShvP0aU1iVQQ
 
 
 
-# In[ ]:
+# In[15]:
 
 
 df_train['tmp'] = df_train.document_id.progress_apply(get_article_info)
 df_test['tmp'] = df_test.document_id.progress_apply(get_article_info)
 
 
-# In[ ]:
+# In[16]:
 
 
 #(true_category, true_title, tmp_imgs, overview, len(text.split()), two_articles, )
 
 
-# In[ ]:
+# In[17]:
 
 
 df_train['true_category'] = df_train.tmp.apply(lambda x: x[0])
@@ -448,11 +533,66 @@ df_test['overview'] = df_test.tmp.apply(lambda x: x[3])
 df_test['text_len'] = df_test.tmp.apply(lambda x: x[4])
 df_test['two_articles'] = df_test.tmp.apply(lambda x: x[5])
 
+
 df_train.drop(['tmp'], axis = 1, inplace = True)
 df_test.drop(['tmp'], axis = 1, inplace = True)
 
 
+# In[22]:
+
+
+def decode_parsing(inp_df):
+    
+    inp_df['true_category'] = inp_df.tmp.apply(lambda x: x[0])
+    inp_df['true_title'] = inp_df.tmp.apply(lambda x: x[1])
+    inp_df['nimgs'] = inp_df.tmp.apply(lambda x: x[2])
+    inp_df['overview'] = inp_df.tmp.apply(lambda x: x[3])
+    inp_df['text_len'] = inp_df.tmp.apply(lambda x: x[4])
+    inp_df['two_articles'] = inp_df.tmp.apply(lambda x: x[5])
+    
+    inp_df.drop(['tmp'], axis = 1, inplace = True)
+    
+    return inp_df
+
+
 # In[ ]:
+
+
+
+
+
+# In[18]:
+
+
+#df_train[(df_train.true_title.apply(lambda x: x.endswith('COVID')))]['true_title'].values
+#df_train[(df_train.true_title.apply(lambda x: 'телеканале РБК' in x))]['true_title'].values
+
+
+# In[19]:
+
+
+# Прямая трансляция, Фоторепортаж, Фотогалерея, Видео, телеканале РБК, Инфографика endswith
+
+
+# In[20]:
+
+
+#df_train[df_train.text_len == 0].true_title.values
+
+
+# In[ ]:
+
+
+
+
+
+# In[ ]:
+
+
+
+
+
+# In[21]:
 
 
 df_train.to_csv(os.path.join(DIR_DATA, 'train_extended.csv'), index = False)
