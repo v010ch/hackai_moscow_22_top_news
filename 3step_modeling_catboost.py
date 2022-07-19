@@ -107,8 +107,8 @@ DIR_SUBM_PART = os.path.join(os.getcwd(), 'subm', 'partial')
 # In[8]:
 
 
-NTRY = 19
-NAME = f'{NTRY}_cb_pca64_sber_lags_parse_bord_nose'
+NTRY = 20
+NAME = f'{NTRY}_cb_pca64_sber_lags_parse_bord_nose_full'
 
 
 # In[9]:
@@ -326,10 +326,10 @@ def plot_feature_importance(importance,names,model_type, imp_number = 30):
 
 # ## views
 
-# In[19]:
+# In[53]:
 
 
-cb_params_views = {"iterations": 100,
+cb_params_views = {"iterations": 500,
                   #"depth": 2,
                   "loss_function": "RMSE",
                   'eval_metric': 'R2',
@@ -337,44 +337,51 @@ cb_params_views = {"iterations": 100,
                   }
 
 
-# In[20]:
+# In[54]:
 
 
 get_ipython().run_cell_magic('time', '', 'scores_views = cv(train_views_full,\n                  cb_params_views,\n                  fold_count=5,\n                  seed = CB_RANDOMSEED, \n                  #plot="True"\n                 )')
 
 
-# In[21]:
+# In[55]:
 
 
 #scores_views
 
 
-# In[22]:
+# In[57]:
 
 
 scores_views[scores_views['test-R2-mean'] == scores_views['test-R2-mean'].max()]
 
-99	99	0.320283	0.047732	0.540503	0.013341	48957.82057	14231.473752	40897.020083	2493.236817
+99	99	0.487575	0.076982	0.660354	0.010815	42671.693769	14002.351624	35193.036169	2693.651339
 # In[ ]:
 
 
 
 
 
-# In[51]:
+# In[ ]:
 
 
-cb_model_views = CatBoostRegressor(#iterations=20,
-                                 learning_rate=0.05,
-                                 depth=10,
+views_iter = scores_views['test-R2-mean'].argmax()
+print(views_iter)
+
+
+# In[52]:
+
+
+cb_model_views = CatBoostRegressor(iterations=views_iter,
+                                 #learning_rate=0.05,
+                                 #depth=10,
                                  random_seed = CB_RANDOMSEED,
-                   n_estimators=100,
+                                 #n_estimators=100,
                                   )
 # Fit model
-cb_model_views.fit(train_ds_views,
-        #train_data, train_labels,
-                   eval_set=val_ds_views, 
-                   #plot = True,
+cb_model_views.fit(train_views_full#train_ds_views,
+                  #train_data, train_labels,
+                  #eval_set=val_ds_views, 
+                  #plot = True,
                   )
 
 
@@ -434,14 +441,14 @@ scores_depth[scores_depth['test-R2-mean'] == scores_depth['test-R2-mean'].max()]
 
 
 cb_model_depth = CatBoostRegressor(#iterations=1000,
-                                 learning_rate=0.05,
-                                 depth=10,
+                                 #learning_rate=0.05,
+                                 #depth=10,
                                  random_seed = CB_RANDOMSEED,
-                   n_estimators=100,
+                                 n_estimators=100,
                                   )
 # Fit model
-cb_model_depth.fit(train_ds_depth,
-                   eval_set=val_ds_depth, 
+cb_model_depth.fit(train_depth_full#train_ds_depth,
+                   #eval_set=val_ds_depth, 
                    #plot = True,
                   )
 
@@ -551,16 +558,16 @@ scores_frp[scores_frp['test-R2-mean'] == scores_frp['test-R2-mean'].max()]
 
 
 cb_model_frp = CatBoostRegressor(#iterations=1000,
-                                 learning_rate=0.05,
-                                 depth=10,
+                                 #learning_rate=0.05,
+                                 #depth=10,
                                  random_seed = CB_RANDOMSEED,
                                  n_estimators=100,
                                  #n_estimators=100,
     #num_trees=None,
                                 )
 # Fit model
-cb_model_frp.fit(train_ds_frp,
-                   eval_set=val_ds_frp, 
+cb_model_frp.fit(train_frp_full#train_ds_frp,
+                   #eval_set=val_ds_frp, 
                    #plot = True,
                   )
 

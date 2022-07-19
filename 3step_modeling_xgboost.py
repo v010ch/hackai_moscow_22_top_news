@@ -101,8 +101,8 @@ DIR_SUBM_PART = os.path.join(os.getcwd(), 'subm', 'partial')
 # In[8]:
 
 
-NTRY = 19
-NAME = f'{NTRY}_xgb_pca64_sber_lags_parse_bord_nose'
+NTRY = 20
+NAME = f'{NTRY}_xgb_pca64_sber_lags_parse_bord_nose_full'
 
 
 # In[9]:
@@ -246,6 +246,7 @@ def r2(y_pred: np.ndarray, y_true: xgb.DMatrix) -> Tuple[str, float]:
 
 
 #xgb.set_config(verbosity=0)
+#xgb_spec = ['day', 'mounth', 'authors_int', 'category_int']
 
 
 # In[20]:
@@ -255,12 +256,13 @@ xgb_params_views = {
     'booster': 'gbtree',
     'objective': 'reg:squarederror',
     #'learning_rate': 0.05,
-    'eta': 0.3,
-    'max_depth': 15, 
+    #'eta': 0.3,
+    #'max_depth': 15, 
     #'num_boost_round': 10000, 
     #'early_stopping_rounds': 100,
 }
 dtrain = xgb.DMatrix(df_train[num_cols], label=df_train[['views']])
+#dtrain = xgb.DMatrix(df_train[xgb_spec], label=df_train[['views']])
 
 
 # In[21]:
@@ -291,18 +293,18 @@ score[score['test-r2-mean'] == score['test-r2-mean'].max()][:1]
 # In[25]:
 
 
-xgb_model_views = XGBRegressor(n_estimators=1000, 
-                               max_depth=7, 
-                               eta=0.1, 
+xgb_model_views = XGBRegressor(#n_estimators=1000, 
+                               #max_depth=7, 
+                               #eta=0.1, 
                                #subsample=0.7, 
-                               colsample_bytree=0.8,
+                               #colsample_bytree=0.8,
                                n_jobs = -1,
                                random_state = XGB_RANDOMSEED,
                               )
 
-xgb_model_views.fit(x_train[num_cols], y_train['views'], 
-                    early_stopping_rounds=5,
-                    eval_set=[(x_val[num_cols], y_val['views'])], 
+xgb_model_views.fit(df_train[num_cols], df_train['views'], #x_train[num_cols], y_train['views'], 
+                    #early_stopping_rounds=5,
+                    #eval_set=[(x_val[num_cols], y_val['views'])], 
                     verbose=False
                    )
 
@@ -360,8 +362,8 @@ xgb_params_depth = {
     'objective': 'reg:squarederror',
     #'n_estimators': 1000, 
     #'learning_rate': 0.05,
-    'eta': 0.3,
-    'max_depth': 15, 
+    #'eta': 0.3,
+    #'max_depth': 15, 
  #   'num_boost_round': 10000, 
  #   'early_stopping_rounds': 100,
 }
@@ -390,18 +392,18 @@ score[score['test-r2-mean'] == score['test-r2-mean'].max()][:1]
 # In[32]:
 
 
-xgb_model_depth = XGBRegressor(n_estimators=1000, 
-                               max_depth=7, 
-                               eta=0.1, 
+xgb_model_depth = XGBRegressor(#n_estimators=1000, 
+                               #max_depth=7, 
+                               #eta=0.1, 
                                #subsample=0.7, 
-                               colsample_bytree=0.8,
+                               #colsample_bytree=0.8,
                                n_jobs = -1,
                                random_state = XGB_RANDOMSEED,
                               )
 
-xgb_model_depth.fit(x_train[num_cols], y_train['depth'], 
-                    early_stopping_rounds=5,
-                    eval_set=[(x_val[num_cols], y_val['depth'])], 
+xgb_model_depth.fit(df_train[num_cols], df_train['depth'], #x_train[num_cols], y_train['depth'], 
+                    #early_stopping_rounds=5,
+                    #eval_set=[(x_val[num_cols], y_val['depth'])], 
                     verbose=False
                    )
 
@@ -453,8 +455,8 @@ xgb_params_fpr = {
     'objective': 'reg:squarederror',
     #'n_estimators': 1000, 
     #'learning_rate': 0.05,
-    'eta': 0.3,
-    'max_depth': 15, 
+    #'eta': 0.3,
+    #'max_depth': 15, 
  #   'num_boost_round': 10000, 
  #   'early_stopping_rounds': 100,
 }
@@ -497,21 +499,18 @@ print('after  ', x_train.shape, x_val.shape)
 # In[40]:
 
 
-xgb_model_frp = XGBRegressor(n_estimators=1000, 
-                             max_depth=7, 
-                             eta=0.1, 
+xgb_model_frp = XGBRegressor(#n_estimators=1000, 
+                             #max_depth=7, 
+                             #eta=0.1, 
                              #subsample=0.7, 
-                             colsample_bytree=0.8,
+                             #colsample_bytree=0.8,
                              n_jobs = -1,
                              random_state = XGB_RANDOMSEED,
                              )
 
-xgb_model_frp.fit(x_train[num_cols], 
-                  y_train['full_reads_percent'], 
-                  early_stopping_rounds=5,
-                  eval_set=[(x_val[num_cols], 
-                             y_val['full_reads_percent'])
-                           ], 
+xgb_model_frp.fit(df_train[num_cols], df_train['full_reads_percent'], #x_train[num_cols], y_train['full_reads_percent'], 
+                  #early_stopping_rounds=5,
+                  #eval_set=[(x_val[num_cols], y_val['full_reads_percent'])], 
                   verbose=False
                  )
 

@@ -116,8 +116,8 @@ DIR_SUBM_PART = os.path.join(os.getcwd(), 'subm', 'partial')
 # In[9]:
 
 
-NTRY = 19
-NAME = f'{NTRY}_lgb_pca64_sber_lags_parse_bord_nose'
+NTRY = 20
+NAME = f'{NTRY}_lgb_pca64_sber_lags_parse_bord_nose_full'
 
 
 # In[10]:
@@ -446,8 +446,8 @@ params = {
     'task': 'train', 
     'boosting': 'gbdt',
     'objective': 'regression',
-    'num_leaves': 6,
-    'learning_rate': 0.05,
+    #'num_leaves': 6,
+    #'learning_rate': 0.05,
     #'metric': {'l2','l1'},
     'metric': {'rmse'},
     'verbose': -1,
@@ -462,21 +462,26 @@ params = {
 }
 
 
-# In[26]:
+# In[59]:
 
 
 score = lgb.cv(params, 
                  train_views_full, 
-                 num_boost_round = 10000,
+                 #num_boost_round = 10000,
+                 num_boost_round=600,
                  nfold = 5,
                  verbose_eval = 500,
-                 early_stopping_rounds = 100,
+                 #early_stopping_rounds = 100,
                  stratified = False,
                  eval_train_metric = r2,
-                 #feval = r2,
+                 feval = r2,
                  #return_cvbooster = True,
                 )
-#print(np.argmin(score['rmse-mean']), score['rmse-mean'][np.argmin(score['rmse-mean'])], score['rmse-stdv'][np.argmin(score['rmse-mean'])], )
+print(np.argmin(score['valid rmse-mean']), score['train rmse-mean'][np.argmin(score['valid rmse-mean'])], score['train rmse-stdv'][np.argmin(score['valid rmse-mean'])], )
+print(np.argmin(score['valid rmse-mean']), score['valid rmse-mean'][np.argmin(score['valid rmse-mean'])], score['valid rmse-stdv'][np.argmin(score['valid rmse-mean'])], )
+
+print(np.argmax(score['valid r2-mean']), score['train r2-mean'][np.argmax(score['valid r2-mean'])], score['train r2-stdv'][np.argmax(score['valid r2-mean'])], )
+print(np.argmax(score['valid r2-mean']), score['valid r2-mean'][np.argmax(score['valid r2-mean'])], score['valid r2-stdv'][np.argmax(score['valid r2-mean'])], )
 
 
 # In[27]:
@@ -508,9 +513,10 @@ score.keys()
 
 # fitting the model
 lgb_model_views = lgb.train(params,
-                            train_set=train_ds_views,
-                            valid_sets=val_ds_views,
-                            early_stopping_rounds=30,
+                            train_set=train_views_full,
+                            #train_set=train_ds_views,
+                            #valid_sets=val_ds_views,
+                            #early_stopping_rounds=30,
                             verbose_eval = False,
                            )
 
@@ -565,7 +571,7 @@ params = {
     'task': 'train', 
     'boosting': 'gbdt',
     'objective': 'regression',
-    'num_leaves': 10,
+    #'num_leaves': 10,
     #'learning_rate': 0.05,
     #'metric': {'l2','l1'},
     'metric': {'rmse'},
@@ -581,19 +587,26 @@ params = {
 }
 
 
-# In[35]:
+# In[60]:
 
 
 score = lgb.cv(params, 
                  train_depth_full, 
-                 num_boost_round = 10000,
+                 #num_boost_round = 10000,
+                 num_boost_round=600,
                  nfold = 5,
                  verbose_eval = 500,
-                 early_stopping_rounds = 100,
+                 #early_stopping_rounds = 100,
                  stratified = False,
+                 eval_train_metric = r2,
+                 feval = r2,
                  #return_cvbooster = True,
                 )
-print(np.argmin(score['rmse-mean']), score['rmse-mean'][np.argmin(score['rmse-mean'])], score['rmse-stdv'][np.argmin(score['rmse-mean'])], )
+print(np.argmin(score['valid rmse-mean']), score['train rmse-mean'][np.argmin(score['valid rmse-mean'])], score['train rmse-stdv'][np.argmin(score['valid rmse-mean'])], )
+print(np.argmin(score['valid rmse-mean']), score['valid rmse-mean'][np.argmin(score['valid rmse-mean'])], score['valid rmse-stdv'][np.argmin(score['valid rmse-mean'])], )
+
+print(np.argmax(score['valid r2-mean']), score['train r2-mean'][np.argmax(score['valid r2-mean'])], score['train r2-stdv'][np.argmax(score['valid r2-mean'])], )
+print(np.argmax(score['valid r2-mean']), score['valid r2-mean'][np.argmax(score['valid r2-mean'])], score['valid r2-stdv'][np.argmax(score['valid r2-mean'])], )
 
 378 0.02735314197033909 0.0009451007887406206
 # In[36]:
@@ -601,9 +614,10 @@ print(np.argmin(score['rmse-mean']), score['rmse-mean'][np.argmin(score['rmse-me
 
 # fitting the model
 lgb_model_depth = lgb.train(params,
-                            train_set=train_ds_depth,
-                            valid_sets=val_ds_depth,
-                            early_stopping_rounds=30,
+                            train_set=train_depth_full,
+                            #train_set=train_ds_depth,
+                            #valid_sets=val_ds_depth,
+                            #early_stopping_rounds=30,
                             verbose_eval = False,
                            )
 
@@ -689,19 +703,26 @@ train_frp_full = lgb.Dataset(df_train[cat_cols + num_cols],
                             )
 
 
-# In[42]:
+# In[61]:
 
 
 score = lgb.cv(params, 
                  train_frp_full, 
-                 num_boost_round = 10000,
+                 #num_boost_round = 10000,
+                 num_boost_round=600,
                  nfold = 5,
                  verbose_eval = 500,
-                 early_stopping_rounds = 100,
+                 #early_stopping_rounds = 100,
                  stratified = False,
+                 eval_train_metric = r2,
+                 feval = r2,
                  #return_cvbooster = True,
                 )
-print(np.argmin(score['rmse-mean']), score['rmse-mean'][np.argmin(score['rmse-mean'])], score['rmse-stdv'][np.argmin(score['rmse-mean'])], )
+print(np.argmin(score['valid rmse-mean']), score['train rmse-mean'][np.argmin(score['valid rmse-mean'])], score['train rmse-stdv'][np.argmin(score['valid rmse-mean'])], )
+print(np.argmin(score['valid rmse-mean']), score['valid rmse-mean'][np.argmin(score['valid rmse-mean'])], score['valid rmse-stdv'][np.argmin(score['valid rmse-mean'])], )
+
+print(np.argmax(score['valid r2-mean']), score['train r2-mean'][np.argmax(score['valid r2-mean'])], score['train r2-stdv'][np.argmax(score['valid r2-mean'])], )
+print(np.argmax(score['valid r2-mean']), score['valid r2-mean'][np.argmax(score['valid r2-mean'])], score['valid r2-stdv'][np.argmax(score['valid r2-mean'])], )
 
 163 7.02038356002961 0.1360496068604094   / 116 / 111
 # In[43]:
@@ -712,7 +733,7 @@ params = {
     'task': 'train', 
     'boosting': 'gbdt',
     'objective': 'regression',
-    'num_leaves': 10,
+    #'num_leaves': 10,
     #'learning_rate': 0.05,
     #'metric': {'l2','l1'},
     'metric': {'rmse'},
@@ -733,9 +754,9 @@ params = {
 
 # fitting the model
 lgb_model_frp = lgb.train(params,
-                            train_set=train_ds_frp,
-                            valid_sets=val_ds_frp,
-                            early_stopping_rounds=30,
+                            train_set=train_frp_full,#train_set=train_ds_frp,
+                            #valid_sets=val_ds_frp,
+                            #early_stopping_rounds=30,
                             verbose_eval = False,
                            )
 
