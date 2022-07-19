@@ -55,6 +55,13 @@ np.random.seed(62185)
 DIR_DATA  = os.path.join(os.getcwd(), 'data')
 
 
+# In[4]:
+
+
+# ctr для специальных статей по украине
+CTR_UKR = 6.096
+
+
 # энкодеры для кодирования категориальных переменных. 
 
 # но, например, для catboost не требуется такого кодирования, так что оригинальный признак так же останется в датасете,   
@@ -84,7 +91,7 @@ ce.WOEEncoder(),
 
 
 
-# In[4]:
+# In[5]:
 
 
 df_train = pd.read_csv(os.path.join(DIR_DATA, 'train_extended.csv'))#, index_col= 0)
@@ -94,7 +101,7 @@ df_train['publish_date'] = pd.to_datetime(df_train['publish_date'])
 df_test['publish_date']  = pd.to_datetime(df_test['publish_date'])
 
 
-# In[5]:
+# In[6]:
 
 
 df_train.shape, df_test.shape
@@ -115,7 +122,7 @@ df_train.shape, df_test.shape
 # признаки, которые могу быть как числовыми так и категориальными: [ ]   
 # }}
 
-# In[6]:
+# In[7]:
 
 
 clmns = {'document_id':{'num':  ['nimgs','text_len', ],   
@@ -149,7 +156,7 @@ clmns = {'document_id':{'num':  ['nimgs','text_len', ],
         }
 
 
-# In[7]:
+# In[8]:
 
 
 print(df_train.columns.values)
@@ -167,7 +174,7 @@ print(df_train.columns.values)
 # 
 # уберем статьи раньше минимальной даты в тесте. для начала так, дальше можно будет поиграться.
 
-# In[8]:
+# In[9]:
 
 
 def clear_data(inp_df: pd.DataFrame, min_time: pd.Timestamp) -> pd.DataFrame:
@@ -186,25 +193,34 @@ def clear_data(inp_df: pd.DataFrame, min_time: pd.Timestamp) -> pd.DataFrame:
         inp_df = inp_df.query('full_reads_percent < 100')
         print(f'shape after frp time {inp_df.shape}')
                               
+
+    #Q1_v = inp_df['views'].quantile(0.25)
+    #Q3_v = inp_df['views'].quantile(0.75)
+    #IQR_v = Q3_v - Q1_v
+    #1_d = inp_df['depth'].quantile(0.25)
+    #Q3_d = inp_df['depth'].quantile(0.75)
+    #IQR_d = Q3_d - Q1_d
+    #1_f = inp_df['full_reads_percent'].quantile(0.25)
+    #Q3_f = inp_df['full_reads_percent'].quantile(0.75)
+    #IQR_f = Q3_f - Q1_f
     
-    Q1_v = inp_df['views'].quantile(0.25)
-    Q3_v = inp_df['views'].quantile(0.75)
-    IQR_v = Q3_v - Q1_v
-    Q1_d = inp_df['depth'].quantile(0.25)
-    Q3_d = inp_df['depth'].quantile(0.75)
-    IQR_d = Q3_d - Q1_d
-    Q1_f = inp_df['full_reads_percent'].quantile(0.25)
-    Q3_f = inp_df['full_reads_percent'].quantile(0.75)
-    IQR_f = Q3_f - Q1_f
+    #inp_df = inp_df.query('views <= (@Q3_v + 1.75 * @IQR_v)')
+    #inp_df = inp_df.query('depth <= (@Q3_d + 1.75 * @IQR_d)')
+    #np_df = inp_df.query('full_reads_percent <= (@Q3_f + 1.75 * @IQR_f)')
     
-    inp_df = inp_df.query('(@Q1_v - 1.5 * @IQR_v) <= views <= (@Q3_v + 1.5 * @IQR_v)')
-    inp_df = inp_df.query('(@Q1_d - 1.5 * @IQR_d) <= depth <= (@Q3_d + 1.5 * @IQR_d)')
-    inp_df = inp_df.query('(@Q1_f - 1.5 * @IQR_f) <= full_reads_percent <= (@Q3_f + 1.5 * @IQR_f)')
+    #inp_df = inp_df.query('(@Q1_v - 1.5 * @IQR_v) <= views <= (@Q3_v + 1.5 * @IQR_v)')
+    #inp_df = inp_df.query('(@Q1_d - 1.75 * @IQR_d) <= depth <= (@Q3_d + 1.75 * @IQR_d)')
+    #np_df = inp_df.query('(@Q1_f - 1.75 * @IQR_f) <= full_reads_percent <= (@Q3_f + 1.75 * @IQR_f)')
+    
+    #inp_df = inp_df.query('depth < 1.38')
+    #inp_df = inp_df.query('views < 128000')
+    
+    #print(f'shape after irq {inp_df.shape}')
     
     return inp_df
 
 
-# In[9]:
+# In[10]:
 
 
 #min_test_time = df_test['publish_date'].min()
@@ -229,7 +245,7 @@ df_train = clear_data(df_train, min_test_time)
 
 # ## title
 
-# In[10]:
+# In[11]:
 
 
 def add_title_features(inp_df):
@@ -249,20 +265,20 @@ def add_title_features(inp_df):
     return inp_df
 
 
-# In[11]:
+# In[12]:
 
 
 df_train = add_title_features(df_train)
 df_test = add_title_features(df_test)
 
 
-# In[12]:
+# In[13]:
 
 
 df_train.ph_report.sum(), df_train.ph_gallery.sum(), df_train.tv_prog.sum(), df_train.online.sum(), df_train.video.sum(), df_train.infogr.sum()
 
 
-# In[13]:
+# In[14]:
 
 
 df_test.ph_report.sum(), df_test.ph_gallery.sum(), df_test.tv_prog.sum(), df_test.online.sum(), df_test.video.sum(), df_test.infogr.sum()
@@ -276,7 +292,7 @@ df_test.ph_report.sum(), df_test.ph_gallery.sum(), df_test.tv_prog.sum(), df_tes
 
 # # publish date
 
-# In[14]:
+# In[15]:
 
 
 holidays = {pd.Timestamp('2022-01-01').date(), pd.Timestamp('2022-01-02').date(), pd.Timestamp('2022-01-03').date(),
@@ -303,13 +319,13 @@ day_after_holiday = {pd.Timestamp('2022-01-10').date(), pd.Timestamp('2022-02-24
                     }
 
 
-# In[15]:
+# In[16]:
 
 
 border = pd.Timestamp('2022-04-08').date()
 
 
-# In[16]:
+# In[17]:
 
 
 def publish_date_features(inp_df: pd.DataFrame) -> pd.DataFrame:
@@ -343,7 +359,7 @@ def publish_date_features(inp_df: pd.DataFrame) -> pd.DataFrame:
     return inp_df
 
 
-# In[17]:
+# In[18]:
 
 
 print('before ', df_train.shape, df_test.shape)
@@ -352,7 +368,7 @@ df_test  = publish_date_features(df_test)
 print('after  ', df_train.shape, df_test.shape)
 
 
-# In[18]:
+# In[19]:
 
 
 print(sum(df_train.holiday), sum(df_train.day_before_holiday), sum(df_train.day_after_holiday), )
@@ -367,13 +383,13 @@ print(sum(df_test.holiday), sum(df_test.day_before_holiday), sum(df_test.day_aft
 
 # Рассчитаем дневные статистики + лаги за 7 дней
 
-# In[19]:
+# In[20]:
 
 
 df_train.sort_values(by='m_d').m_d.diff().value_counts()
 
 
-# In[20]:
+# In[21]:
 
 
 def create_daily_stats(inp_df: pd.DataFrame, max_lags: int = 7) -> pd.DataFrame:
@@ -398,7 +414,7 @@ def create_daily_stats(inp_df: pd.DataFrame, max_lags: int = 7) -> pd.DataFrame:
     return ret_df
 
 
-# In[21]:
+# In[22]:
 
 
 daily_stats = create_daily_stats(df_train)
@@ -413,7 +429,7 @@ daily_stats.to_csv(os.path.join(DIR_DATA, 'dayly_stats.csv'), index = False)
 
 # Добавим их к датасетам
 
-# In[22]:
+# In[23]:
 
 
 def add_daily_stats(inp_df:pd.DataFrame) -> pd.DataFrame:
@@ -427,7 +443,7 @@ def add_daily_stats(inp_df:pd.DataFrame) -> pd.DataFrame:
     return ret_df
 
 
-# In[23]:
+# In[24]:
 
 
 print('before ', df_train.shape, df_test.shape, 'add ', daily_stats.shape)
@@ -438,7 +454,7 @@ print('after  ', df_train.shape, df_test.shape)
 
 # Проверим на пропуски в тесте
 
-# In[24]:
+# In[25]:
 
 
 df_test[['views_min', 'views_max', 'views_mean', 'views_std',
@@ -479,28 +495,50 @@ df_test[['views_min', 'views_max', 'views_mean', 'views_std',
 
 # Авторы считываются как строки, а не как массив строк. исправим.
 
-# In[25]:
+# In[26]:
 
+
+def prep_authors(inp_df): 
+
+    
+    inp_df["authors_int"] = inp_df.authors.astype('category')
+    inp_df["authors_int"] = inp_df.authors_int.cat.codes
+    inp_df["authors_int"] = inp_df.authors_int.astype('int')
+    
+    
+    inp_df['authors'] = inp_df.authors.apply(lambda x: literal_eval(x))
+    inp_df['authors'] = inp_df.authors.apply(lambda x: x if len(x) > 0 else ['without_author'])
+    
+    inp_df['Nauthors'] = inp_df.authors.apply(lambda x: len(x))
+    
+    if 'authors_int' not in clmns['authors']['num']:
+        clmns['authors']['num'].extend(['authors_int'])
+    
+    if 'Nauthors' not in clmns['authors']['num']:
+        clmns['authors']['num'].extend(['Nauthors'])
+    
+    return inp_df
 
 df_train['authors']  = df_train.authors.apply(lambda x: literal_eval(x))
 df_test['authors']   = df_test.authors.apply( lambda x: literal_eval(x))
 
 # пустое поле автора заменим на значение, что автор не указан
 df_train['authors'] = df_train['authors'].apply(lambda x: x if len(x) > 0 else ['without_author'])
-df_test['authors']  = df_test['authors'].apply( lambda x: x if len(x) > 0 else ['without_author'])
-
-
-# In[26]:
-
-
-df_train['Nauthors'] = df_train.authors.apply(lambda x: len(x))
-df_test['Nauthors']  = df_test.authors.apply(lambda x: len(x))
-
-
+df_test['authors']  = df_test['authors'].apply( lambda x: x if len(x) > 0 else ['without_author'])df_train['Nauthors'] = df_train.authors.apply(lambda x: len(x))
+df_test['Nauthors']  = df_test.authors.apply(lambda x: len(x))clmns['authors']['num'].extend(['Nauthors'])
 # In[27]:
 
 
-clmns['authors']['num'].extend(['Nauthors'])
+print('before ', df_train.shape, df_test.shape)
+df_train = prep_authors(df_train)
+df_test  = prep_authors(df_test)
+print('after  ', df_train.shape, df_test.shape)
+
+
+# In[ ]:
+
+
+
 
 
 # выделяем всех авторов в трейне
@@ -784,10 +822,29 @@ def add_ctr_features(inp_df):
 #print('after  ', df_train.shape, df_test.shape)
 
 
+# In[41]:
+
+
+df_test['spec'] = df_test.ctr.apply(lambda x: 1 if x == CTR_UKR else 0)
+
+
 # In[ ]:
 
 
 
+
+
+# In[ ]:
+
+
+
+
+
+# In[42]:
+
+
+if 'ctr' not in clmns['ctr']['num']:
+    clmns['ctr']['num'].extend(['ctr']) 
 
 
 # In[ ]:
@@ -800,7 +857,7 @@ def add_ctr_features(inp_df):
 
 # Собираем статистики по категориям
 
-# In[41]:
+# In[43]:
 
 
 def create_daily_stats_by_category(inp_df: pd.DataFrame, max_lags: int = 7) -> pd.DataFrame:
@@ -829,7 +886,7 @@ def create_daily_stats_by_category(inp_df: pd.DataFrame, max_lags: int = 7) -> p
     return ret_df
 
 
-# In[42]:
+# In[44]:
 
 
 daily_stats_category = create_daily_stats_by_category(df_train)
@@ -844,18 +901,20 @@ daily_stats_category.to_csv(os.path.join(DIR_DATA, 'daily_stats_category.csv'), 
 
 # Добавляем статистики по категориям в датасеты
 
-# In[43]:
+# In[45]:
 
 
 def add_daily_stats_category(inp_df:pd.DataFrame) -> pd.DataFrame:
     
     ret_df = inp_df.merge(daily_stats_category, on = ['category', 'm_d'], how = 'left', validate = 'many_to_one')
     
+    if daily_stats_category.columns[3] not in clmns['category']['num']:
+        clmns['category']['num'].extend(daily_stats_category.columns[2:])
     
     return ret_df
 
 
-# In[44]:
+# In[46]:
 
 
 print('before ', df_train.shape, df_test.shape, 'add ', daily_stats_category.shape)
@@ -864,15 +923,15 @@ df_test = add_daily_stats_category(df_test)
 print('after  ', df_train.shape, df_test.shape, )
 
 
-# In[45]:
+# In[47]:
 
 
-clmns['category']['num'].extend(daily_stats_category.columns[2:])
+#clmns['category']['num'].extend(daily_stats_category.columns[2:])
 
 
 # Проверяем, что все данные есть в тесте
 
-# In[46]:
+# In[48]:
 
 
 #df_test[['cat_views_min', 'cat_views_max', 'cat_views_mean', 'cat_views_std',
@@ -889,10 +948,32 @@ df_test[daily_stats_category.columns[2:]].isnull().sum()
 
 
 
-# In[ ]:
+# In[49]:
 
 
+def prep_category(inp_df):
+    
+    inp_df["category_int"] = inp_df.category.astype('category')
+    inp_df["category_int"] = inp_df.category_int.cat.codes
+    inp_df["category_int"] = inp_df.category_int.astype('int')
+    
+    if 'category_int' not in clmns['category']['num']:
+        clmns['category']['num'].extend(['category_int'])
+    
+    
+    if 'category' not in clmns['category']['cat']:
+        clmns['category']['cat'].extend(['category'])
+    
+    return inp_df
 
+
+# In[50]:
+
+
+print('before ', df_train.shape, df_test.shape, 'add ', daily_stats_category.shape)
+df_train = prep_category(df_train)
+df_test = prep_category(df_test)
+print('after  ', df_train.shape, df_test.shape, )
 
 
 # In[ ]:
@@ -903,7 +984,7 @@ df_test[daily_stats_category.columns[2:]].isnull().sum()
 
 # ## tags
 
-# In[47]:
+# In[51]:
 
 
 df_train['tags']  = df_train.tags.apply(lambda x: literal_eval(x))
@@ -953,7 +1034,7 @@ num_cols = [el for el in num_cols if el not in ['document_id', 'title', 'publish
 for el in cat_cols:
     if el not in df_train.columns or el not in df_test.columns:
         print(el)
-# In[48]:
+# In[52]:
 
 
 cat_cols = []
@@ -966,7 +1047,7 @@ for el in clmns.keys():
         print(clmns[el]['both'])
 
 
-# In[49]:
+# In[53]:
 
 
 num_cols.extend(['hour', 'mounth', 'dow', ])
@@ -976,9 +1057,27 @@ cat_cols.extend([ 'ph_report', 'ph_gallery', 'tv_prog', 'online', 'video', 'info
                 ])
 
 
+# In[ ]:
+
+
+
+
+
+# In[ ]:
+
+
+
+
+
+# In[ ]:
+
+
+
+
+
 # нормализуем
 
-# In[50]:
+# In[54]:
 
 
 #scaler = preprocessing.MinMaxScaler()   #Transform features by scaling each feature to a given range.
@@ -997,10 +1096,12 @@ df_test[num_cols]  = scaler.transform(df_test[num_cols])
 
 
 
-# In[ ]:
+# In[55]:
 
 
-
+# определяем CTR_UKR спецстатей по украине после нормализации
+#for el in doc_id_ukr:
+#    print(df_test[df_test.document_id == el].ctr.values)
 
 
 # In[ ]:
@@ -1011,7 +1112,7 @@ df_test[num_cols]  = scaler.transform(df_test[num_cols])
 
 # Добавляем эмбединги
 
-# In[51]:
+# In[56]:
 
 
 # sberbank-ai/sbert_large_mt_nlu_ru       1024  1.71Gb
@@ -1029,7 +1130,7 @@ def add_ttle_embeding(inp_df: pd.DataFrame) -> pd.DataFrame:
     
     pass    
     
-# In[52]:
+# In[57]:
 
 
 emb_train = pd.read_csv(os.path.join(DIR_DATA, f'ttl_cln_emb_train_{MODEL_FOLDER}_{MAX_LENGTH}_pca{PCA_COMPONENTS}.csv'))
@@ -1040,7 +1141,7 @@ df_train = df_train.merge(emb_train, on = 'document_id', validate = 'one_to_one'
 df_train.shape, emb_train.shape
 
 
-# In[53]:
+# In[58]:
 
 
 emb_test = pd.read_csv(os.path.join(DIR_DATA, f'ttl_cln_emb_test_{MODEL_FOLDER}_{MAX_LENGTH}_pca{PCA_COMPONENTS}.csv'))
@@ -1051,20 +1152,20 @@ df_test = df_test.merge(emb_test, on = 'document_id', validate = 'one_to_one')
 df_test.shape, emb_test.shape
 
 
-# In[54]:
+# In[59]:
 
 
 num_cols = num_cols + list(emb_train.columns)
 
 
-# In[55]:
+# In[60]:
 
 
 if 'document_id' in num_cols:
     num_cols.remove('document_id')
 
 
-# In[56]:
+# In[61]:
 
 
 clmns['title']['num'].extend(emb_train.columns[1:])
@@ -1081,7 +1182,7 @@ clmns['title']['num'].extend(emb_train.columns[1:])
 # вероятно лучше разделять до нормализации и категориальных энкодеров, что бы значения из валидационной выборки не были в учтены в тесте   
 # однако, на первой итерации устроит и разбиение после всех преобразований
 
-# In[57]:
+# In[62]:
 
 
 x_train, x_val = train_test_split(df_train, stratify = df_train['category'], test_size = 0.2)
@@ -1096,13 +1197,13 @@ df_train.shape, x_train.shape, x_val.shape
 
 # ## save
 
-# In[58]:
+# In[63]:
 
 
 df_test.shape, x_train.shape, x_val.shape, df_test.shape
 
 
-# In[59]:
+# In[64]:
 
 
 df_train.to_csv(os.path.join( DIR_DATA, 'train_upd.csv'))
@@ -1111,21 +1212,21 @@ x_train.to_csv(os.path.join(DIR_DATA,   'x_train.csv'))
 x_val.to_csv(os.path.join(DIR_DATA,     'x_val.csv'))
 
 
-# In[60]:
+# In[65]:
 
 
 with open(os.path.join(DIR_DATA, 'num_columns.pkl'), 'wb') as pickle_file:
     pkl.dump(num_cols, pickle_file)
 
 
-# In[61]:
+# In[66]:
 
 
 with open(os.path.join(DIR_DATA, 'cat_columns.pkl'), 'wb') as pickle_file:
     pkl.dump(cat_cols, pickle_file)
 
 
-# In[62]:
+# In[67]:
 
 
 with open(os.path.join(DIR_DATA, 'clmns.pkl'), 'wb') as pickle_file:
@@ -1144,13 +1245,25 @@ with open(os.path.join(DIR_DATA, 'clmns.pkl'), 'wb') as pickle_file:
 
 
 
-# In[63]:
+# In[ ]:
+
+
+
+
+
+# In[68]:
+
+
+#clmns
+
+
+# In[69]:
 
 
 cat_cols
 
 
-# In[64]:
+# In[70]:
 
 
 print(num_cols)

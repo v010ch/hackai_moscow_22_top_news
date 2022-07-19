@@ -116,15 +116,14 @@ DIR_SUBM_PART = os.path.join(os.getcwd(), 'subm', 'partial')
 # In[9]:
 
 
-NTRY = 15
-NAME = f'{NTRY}_lgb_pca64_sber_lags_parse_bord_nose_irq'
+NTRY = 19
+NAME = f'{NTRY}_lgb_pca64_sber_lags_parse_bord_nose'
 
 
 # In[10]:
 
 
-CTR_UKR = 6.096
-
+#CTR_UKR = 6.096
 VIEWS_UKR = 2554204
 DEPTH_UKR = 1.799
 FPR_UKR = 4.978
@@ -146,11 +145,11 @@ x_train  = pd.read_csv(os.path.join(DIR_DATA, 'x_train.csv'))#, index_col= 0)
 x_val    = pd.read_csv(os.path.join(DIR_DATA, 'x_val.csv'))#, index_col= 0)
 df_test  = pd.read_csv(os.path.join(DIR_DATA, 'test_upd.csv'))#, index_col= 0)
 
-with open(os.path.join(DIR_DATA, 'cat_columns.pkl'), 'rb') as pickle_file:
-    cat_cols = pkl.load(pickle_file)
+#with open(os.path.join(DIR_DATA, 'cat_columns.pkl'), 'rb') as pickle_file:
+#    cat_cols = pkl.load(pickle_file)
     
-with open(os.path.join(DIR_DATA, 'num_columns.pkl'), 'rb') as pickle_file:
-    num_cols = pkl.load(pickle_file)
+#with open(os.path.join(DIR_DATA, 'num_columns.pkl'), 'rb') as pickle_file:
+#    num_cols = pkl.load(pickle_file)
 
 with open(os.path.join(DIR_DATA, 'clmns.pkl'), 'rb') as pickle_file:
     clmns = pkl.load(pickle_file)
@@ -159,7 +158,7 @@ with open(os.path.join(DIR_DATA, 'clmns.pkl'), 'rb') as pickle_file:
 # In[12]:
 
 
-df_train.shape, df_test.shape, len(cat_cols), len(num_cols), #x_train.shape, x_val.shape,
+df_train.shape, df_test.shape, #len(cat_cols), len(num_cols), #x_train.shape, x_val.shape,
 
 
 # отделяем метки от данных
@@ -186,7 +185,7 @@ x_val.drop(['views', 'depth', 'full_reads_percent'], axis = 1, inplace = True)
 # In[15]:
 
 
-cat_cols = cat_cols + ['category']
+#cat_cols = cat_cols + ['category']
 
 
 # In[16]:
@@ -528,7 +527,7 @@ val_score_views   = r2_score(y_val["views"],   preds_val_views)
 
 train_score_views, val_score_views
 
-(0.598891443106734, 0.6282297125590693)
+(0.6416954955416185, 0.6286674393825709) 19 emb + pca 64 + lags + nauth + all_norm + parse + auth int + cat int
 # In[ ]:
 
 
@@ -621,7 +620,7 @@ val_score_depth   = r2_score(y_val["depth"],   preds_val_depth)
 
 train_score_depth, val_score_depth
 
-(0.8737760841835236, 0.7723557340558183) emb + pca 64 + lags + nauth + all_norm + parse
+(0.8448046891918493, 0.8083896919598925) 19 emb + pca 64 + lags + nauth + all_norm + parse + auth int + cat int
 # In[ ]:
 
 
@@ -757,7 +756,7 @@ val_score_frp   = r2_score(y_val["full_reads_percent"],   preds_val_frp)
 
 train_score_frp, val_score_frp
 
-(0.6691482290489612, 0.5600576117433922) emb + pca 64 + lags + nauth + all_norm + parse
+(0.6896605835625026, 0.5981722952123387) 19 emb + pca 64 + lags + nauth + all_norm + parse + auth int + cat int
 # In[ ]:
 
 
@@ -791,7 +790,7 @@ score_val  = 0.4 * val_score_views  + 0.3 * val_score_depth  + 0.3 * val_score_f
 
 score_train, score_val
 
-(0.5476311546688098, 0.5221479268702258)
+(0.717017780042953, 0.6734355719046977) 19 emb + pca 64 + lags + nauth + all_norm + parse + auth int + cat int
 # In[ ]:
 
 
@@ -877,7 +876,7 @@ subm['full_reads_percent'] = pred_frp
 # In[52]:
 
 
-doc_id_ukr = df_test[df_test.ctr == CTR_UKR].document_id.values
+doc_id_ukr = df_test[df_test.spec == 1].document_id.values
 subm.query('document_id in @doc_id_ukr')[['views', 'depth', 'full_reads_percent']]
 
 

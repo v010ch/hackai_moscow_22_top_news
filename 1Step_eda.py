@@ -261,16 +261,29 @@ df_train.shape, df_train.index.nunique()
 
 # ## Targets
 
-# In[ ]:
+# In[20]:
 
 
+df_train.views.nlargest(20)
 
 
+# In[24]:
 
-# In[28]:
+
+plot_corrc(df_train.query('views > 60000'), ['views'], ['depth', 'full_reads_percent'])
 
 
-plot_corrc(df_train, ['views'], ['depth', 'full_reads_percent'])
+# In[34]:
+
+
+df_train = df_train.query('depth < 1.33')
+df_train = df_train.query('views < 128000')
+
+
+# In[35]:
+
+
+df_train.shape
 
 # Computing IQR
 Q1 = df['nb'].quantile(0.25)
@@ -1109,7 +1122,7 @@ df_test[df_test.title_len_diff > 50].title.sample(10).values
 
 # # authors
 
-# In[ ]:
+# In[29]:
 
 
 df_train['authors']  = df_train.authors.apply(lambda x: literal_eval(x))
@@ -1119,19 +1132,19 @@ df_test['authors']  = df_test.authors.apply(lambda x: literal_eval(x))
 df_test['Nauthors'] = df_test.authors.apply(lambda x: len(x))
 
 
-# In[ ]:
+# In[30]:
 
 
 df_train['Nauthors'].value_counts()
 
 
-# In[ ]:
+# In[31]:
 
 
 df_test['Nauthors'].value_counts()
 
 
-# In[ ]:
+# In[32]:
 
 
 #df_train[df_train.Nauthors >= 4].depth.hist(bins = 40)
@@ -1140,25 +1153,25 @@ df_test['Nauthors'].value_counts()
 # удивительно, что возможные значения количества авторов в трейне и тесте совпадают. можно использовать как признак  
 # однако значения при > 3 малы, что может привести к переобучению
 
-# In[ ]:
+# In[33]:
 
 
 plot_hists_sns(df_train, 'Nauthors')
 
 
-# In[ ]:
+# In[34]:
 
 
 df_train['Nauthors_upd'] = df_train['Nauthors'].apply(lambda x: x if x < 4 else 4) # 3
 
 
-# In[ ]:
+# In[35]:
 
 
 df_train['Nauthors_upd'].value_counts()
 
 
-# In[ ]:
+# In[36]:
 
 
 plot_hists_sns(df_train, 'Nauthors_upd')
@@ -1454,37 +1467,37 @@ for el in sess_zip:
 
 # # text len
 
-# In[ ]:
+# In[37]:
 
 
 plot_corrc(df_train, ['text_len'], ['views', 'depth', 'full_reads_percent'])
 
 
-# In[ ]:
+# In[38]:
 
 
 df_train.text_len.min(), df_train.text_len.max(), 
 
 
-# In[ ]:
+# In[39]:
 
 
 df_train[df_train.text_len > 2000].text_len
 
 
-# In[ ]:
+# In[40]:
 
 
 df_train.text_len.hist(bins = 40)
 
 
-# In[ ]:
+# In[41]:
 
 
 df_train[df_train.text_len > 2000]
 
 
-# In[ ]:
+# In[43]:
 
 
 bins = [-0.25 + 100*el for el in range(34)] + [5000]
@@ -1498,7 +1511,7 @@ df_train['text_len_bins'] = pd.cut(df_train.text_len, bins = bins, labels = bins
 
 
 
-# In[ ]:
+# In[44]:
 
 
 plot_hists_sns(df_train, 'text_len_bins')

@@ -101,15 +101,14 @@ DIR_SUBM_PART = os.path.join(os.getcwd(), 'subm', 'partial')
 # In[8]:
 
 
-NTRY = 15
-NAME = f'{NTRY}_xgb_pca64_sber_lags_parse_bord_nose_irq'
+NTRY = 19
+NAME = f'{NTRY}_xgb_pca64_sber_lags_parse_bord_nose'
 
 
 # In[9]:
 
 
-CTR_UKR = 6.096
-
+#CTR_UKR = 6.096
 VIEWS_UKR = 2554204
 DEPTH_UKR = 1.799
 FPR_UKR = 4.978
@@ -131,11 +130,11 @@ x_train  = pd.read_csv(os.path.join(DIR_DATA, 'x_train.csv'), index_col= 0)
 x_val    = pd.read_csv(os.path.join(DIR_DATA, 'x_val.csv'), index_col= 0)
 df_test  = pd.read_csv(os.path.join(DIR_DATA, 'test_upd.csv'), index_col= 0)
 
-with open(os.path.join(DIR_DATA, 'cat_columns.pkl'), 'rb') as pickle_file:
-    cat_cols = pkl.load(pickle_file)
+#with open(os.path.join(DIR_DATA, 'cat_columns.pkl'), 'rb') as pickle_file:
+#    cat_cols = pkl.load(pickle_file)
     
-with open(os.path.join(DIR_DATA, 'num_columns.pkl'), 'rb') as pickle_file:
-    num_cols = pkl.load(pickle_file)
+#with open(os.path.join(DIR_DATA, 'num_columns.pkl'), 'rb') as pickle_file:
+#    num_cols = pkl.load(pickle_file)
     
 with open(os.path.join(DIR_DATA, 'clmns.pkl'), 'rb') as pickle_file:
     clmns = pkl.load(pickle_file)
@@ -144,7 +143,7 @@ with open(os.path.join(DIR_DATA, 'clmns.pkl'), 'rb') as pickle_file:
 # In[11]:
 
 
-x_train.shape, x_val.shape, df_test.shape, len(cat_cols), len(num_cols)
+x_train.shape, x_val.shape, df_test.shape, #len(cat_cols), len(num_cols)
 
 
 # отделяем метки от данных
@@ -239,7 +238,6 @@ def r2(y_pred: np.ndarray, y_true: xgb.DMatrix) -> Tuple[str, float]:
     #print(type(y_pred)) # np.array
     
     return 'r2', r2_score(y_true.get_label(), y_pred)
-    
 
 
 # ## views
@@ -253,7 +251,7 @@ def r2(y_pred: np.ndarray, y_true: xgb.DMatrix) -> Tuple[str, float]:
 # In[20]:
 
 
-cb_params_views = {
+xgb_params_views = {
     'booster': 'gbtree',
     'objective': 'reg:squarederror',
     #'learning_rate': 0.05,
@@ -268,7 +266,7 @@ dtrain = xgb.DMatrix(df_train[num_cols], label=df_train[['views']])
 # In[21]:
 
 
-get_ipython().run_cell_magic('time', '', "score = xgb.cv(cb_params_views, dtrain, cv_ntrees, nfold=5, #early_stopping_rounds=1000,\n        metrics={'rmse'},\n        custom_metric = r2,\n       #callbacks=[xgb.callback.EvaluationMonitor(show_stdv=True)]\n      )")
+get_ipython().run_cell_magic('time', '', "score = xgb.cv(xgb_params_views, dtrain, cv_ntrees, nfold=5, #early_stopping_rounds=1000,\n        metrics={'rmse'},\n        custom_metric = r2,\n       #callbacks=[xgb.callback.EvaluationMonitor(show_stdv=True)]\n      )")
 
 
 # In[22]:
@@ -288,8 +286,8 @@ score[score['train-r2-mean'] == score['train-r2-mean'].max()][:1]
 
 score[score['test-r2-mean'] == score['test-r2-mean'].max()][:1]
 
-55	3541.342715	    641.230136	49545.854791	12187.893784	0.996433	0.001161	0.277382	0.11142
-8	10656.078996	1508.117669	49275.311294	12570.20743	    0.968962	0.004469	0.287494	0.112323
+50	153.028055	47.500806	11842.201632	285.57091	0.999868	0.00007	0.274994	0.020518
+61	152.971973	47.512338	11842.180431	285.593405	0.999868	0.00007	0.274996	0.020524
 # In[25]:
 
 
@@ -327,7 +325,7 @@ val_score_views   = r2_score(y_val["views"],   preds_val_views)
 
 train_score_views, val_score_views
 
-(0.7755792099701974, 0.8464698702781239) baseline
+(0.7755792099701974, 0.8464698702781239) 1 baseline
 # In[ ]:
 
 
@@ -357,7 +355,7 @@ plot_importance(xgb_model_views, 30, 'weight')
 # In[28]:
 
 
-cb_params_depth = {
+xgb_params_depth = {
     'booster': 'gbtree',
     'objective': 'reg:squarederror',
     #'n_estimators': 1000, 
@@ -373,7 +371,7 @@ dtrain = xgb.DMatrix(df_train[num_cols], label=df_train[['depth']])
 # In[29]:
 
 
-get_ipython().run_cell_magic('time', '', "score = xgb.cv(cb_params_depth, dtrain, cv_ntrees, nfold=5, #early_stopping_rounds=1000,\n        metrics={'rmse'},\n        custom_metric = r2,\n       #callbacks=[xgb.callback.EvaluationMonitor(show_stdv=True)]\n      )\nscore.tail()")
+get_ipython().run_cell_magic('time', '', "score = xgb.cv(xgb_params_depth, dtrain, cv_ntrees, nfold=5, #early_stopping_rounds=1000,\n        metrics={'rmse'},\n        custom_metric = r2,\n       #callbacks=[xgb.callback.EvaluationMonitor(show_stdv=True)]\n      )\nscore.tail()")
 
 
 # In[30]:
@@ -387,8 +385,8 @@ score[score['train-r2-mean'] == score['train-r2-mean'].max()][:1]
 
 score[score['test-r2-mean'] == score['test-r2-mean'].max()][:1]
 
-41	0.000904	0.000214	0.028241	0.001703	0.999773	0.000093	0.790149	0.021323
-35	0.001028	0.000131	0.02824	    0.001704	0.999718	0.000071	0.790173	0.021314
+36	0.000655	0.00005	    0.023424	0.000554	0.999856	0.000023	0.81588	    0.011583
+23	0.001309	0.000082	0.023411	0.000574	0.999424	0.000074	0.816096	0.011584
 # In[32]:
 
 
@@ -408,7 +406,7 @@ xgb_model_depth.fit(x_train[num_cols], y_train['depth'],
                    )
 
 
-# In[52]:
+# In[33]:
 
 
 # Get predictions and metrics
@@ -420,7 +418,7 @@ val_score_depth   = r2_score(y_val["depth"],   preds_val_depth)
 
 train_score_depth, val_score_depth
 
-(0.9400349544217423, 0.804401115229307)  emb + pca 64 + lags + nauth + all_norm + parse
+(0.9493558116911391, 0.806157749501932) 19 emb + pca 64 + lags + nauth + all_norm + parse + auth int + cat int
 # In[ ]:
 
 
@@ -450,7 +448,7 @@ plot_importance(xgb_model_depth, 30, 'weight')
 # In[35]:
 
 
-cb_params_fpr = {
+xgb_params_fpr = {
     'booster': 'gbtree',
     'objective': 'reg:squarederror',
     #'n_estimators': 1000, 
@@ -466,7 +464,7 @@ dtrain = xgb.DMatrix(df_train[num_cols], label=df_train[['full_reads_percent']])
 # In[36]:
 
 
-get_ipython().run_cell_magic('time', '', "score = xgb.cv(cb_params_fpr, dtrain, cv_ntrees, nfold=5, #early_stopping_rounds=1000,\n        metrics={'rmse'},\n        custom_metric = r2,\n       #callbacks=[xgb.callback.EvaluationMonitor(show_stdv=True)]\n      )\nscore.tail()")
+get_ipython().run_cell_magic('time', '', "score = xgb.cv(xgb_params_fpr, dtrain, cv_ntrees, nfold=5, #early_stopping_rounds=1000,\n        metrics={'rmse'},\n        custom_metric = r2,\n       #callbacks=[xgb.callback.EvaluationMonitor(show_stdv=True)]\n      )\nscore.tail()")
 
 
 # In[37]:
@@ -480,8 +478,8 @@ score[score['train-r2-mean'] == score['train-r2-mean'].max()][:1]
 
 score[score['test-r2-mean'] == score['test-r2-mean'].max()][:1]
 
-52	0.096801	0.029933	7.717025	0.133041	0.999901	0.000048	0.420521	0.015615
-47	0.097153	0.029723	7.716983	0.133039	0.9999	    0.000047	0.420528	0.015609
+55	0.101896	0.014686	7.738181	0.147884	0.999894	0.000029	0.399838	0.024214
+44	0.102814	0.014621	7.738135	0.147831	0.999892	0.000029	0.399846	0.024203
 # In[39]:
 
 
@@ -530,7 +528,7 @@ val_score_frp   = r2_score(y_val["full_reads_percent"],   preds_val_frp)
 
 train_score_frp, val_score_frp
 
-(0.8954773259992533, 0.545897622350289) emb + pca 64 + lags + nauth + all_norm + parse
+(0.8833127931674734, 0.5793978765630567) 19 emb + pca 64 + lags + nauth + all_norm + parse + auth int + cat int
 # In[ ]:
 
 
@@ -557,7 +555,7 @@ score_val   = 0.4 * val_score_views   + 0.3 * val_score_depth   + 0.3 * val_scor
 
 score_train, score_val
 
-(0.9298327062037938, 0.5924959277458732) emb + pca 64 + lags + nauth + all_norm + parse
+(0.9217527720207549, 0.6347593575523295) 19 emb + pca 64 + lags + nauth + all_norm + parse + auth int + cat int
 # In[ ]:
 
 
@@ -654,7 +652,7 @@ subm['full_reads_percent'] = pred_frp
 # In[48]:
 
 
-doc_id_ukr = df_test[df_test.ctr == CTR_UKR].document_id.values
+doc_id_ukr = df_test[df_test.spec == 1].document_id.values
 subm.query('document_id in @doc_id_ukr')[['views', 'depth', 'full_reads_percent']]
 
 
