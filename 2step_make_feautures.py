@@ -13,7 +13,7 @@ from itertools import product
 
 import category_encoders as ce
 from sklearn import preprocessing
-from sklearn.model_selection import train_test_split
+#from sklearn.model_selection import train_test_split
 
 from ast import literal_eval
 
@@ -152,6 +152,10 @@ clmns = {'document_id':{'num':  ['nimgs','text_len', ],
          'title': {'num':  [],   
                    'cat':  ['two_articles'],
                    'both': [],
+                },
+         'poly':{'num':  [],   
+                'cat':  [],
+                'both': [],
                 },
         }
 
@@ -1069,6 +1073,93 @@ cat_cols.extend([ 'ph_report', 'ph_gallery', 'tv_prog', 'online', 'video', 'info
 
 
 
+# # Полипризнаки
+
+# In[54]:
+
+
+poly_cols = ['Nauthors', 'ctr', 'text_len', 'hour', 'day', 'mounth', 'dow', 'nimgs', 'category_int']
+len(poly_cols)
+
+
+# In[55]:
+
+
+poly2 = preprocessing.PolynomialFeatures(degree = 2, include_bias = False)
+poly2.fit(df_train[poly_cols])
+
+
+# In[56]:
+
+
+poly3 = preprocessing.PolynomialFeatures(degree = 3, include_bias = False)
+poly3.fit(df_train[poly_cols])
+
+
+# In[ ]:
+
+
+
+
+
+# In[59]:
+
+
+def addd_poly(inp_df, inp_poly):
+    
+    inp_cols = inp_df.columns
+    
+    tmp = inp_poly.transform(inp_df[poly_cols])
+    tmp = pd.DataFrame(tmp, columns = inp_poly.get_feature_names(poly_cols))
+    
+    inp_df = pd.concat([inp_df, 
+                        tmp.iloc[:, len(poly_cols):]
+                       ], ignore_index = True, axis = 1)
+    new_cols = list(inp_cols) + list(inp_poly.get_feature_names(poly_cols)[len(poly_cols):])
+    
+    inp_df.columns = new_cols
+         
+    if inp_poly.get_feature_names(poly_cols)[-1] not in clmns['poly']['num']:
+        clmns['poly']['num'].extend(inp_poly.get_feature_names(poly_cols)[len(poly_cols):])
+        
+        
+    return inp_df
+
+
+# In[60]:
+
+
+print('before ', df_train.shape, df_test.shape)
+df_train = addd_poly(df_train, poly2) #poly3
+df_test  = addd_poly(df_test,  poly2) #poly3
+print('after  ', df_train.shape, df_test.shape)
+
+
+# In[ ]:
+
+
+
+
+
+# In[61]:
+
+
+num_cols.extend(clmns['poly']['num'])
+
+
+# In[ ]:
+
+
+
+
+
+# In[62]:
+
+
+df_train.to_csv(os.path.join( DIR_DATA, 'train_upd_no_norm.csv'), index = False)
+df_test.to_csv(os.path.join( DIR_DATA,  'test_upd_no_norm.csv'), index = False)
+
+
 # In[ ]:
 
 
@@ -1077,7 +1168,7 @@ cat_cols.extend([ 'ph_report', 'ph_gallery', 'tv_prog', 'online', 'video', 'info
 
 # нормализуем
 
-# In[54]:
+# In[63]:
 
 
 #scaler = preprocessing.MinMaxScaler()   #Transform features by scaling each feature to a given range.
@@ -1096,7 +1187,7 @@ df_test[num_cols]  = scaler.transform(df_test[num_cols])
 
 
 
-# In[55]:
+# In[64]:
 
 
 # определяем CTR_UKR спецстатей по украине после нормализации
@@ -1112,7 +1203,7 @@ df_test[num_cols]  = scaler.transform(df_test[num_cols])
 
 # Добавляем эмбединги
 
-# In[56]:
+# In[65]:
 
 
 # sberbank-ai/sbert_large_mt_nlu_ru       1024  1.71Gb
@@ -1130,7 +1221,7 @@ def add_ttle_embeding(inp_df: pd.DataFrame) -> pd.DataFrame:
     
     pass    
     
-# In[57]:
+# In[66]:
 
 
 emb_train = pd.read_csv(os.path.join(DIR_DATA, f'ttl_cln_emb_train_{MODEL_FOLDER}_{MAX_LENGTH}_pca{PCA_COMPONENTS}.csv'))
@@ -1141,7 +1232,7 @@ df_train = df_train.merge(emb_train, on = 'document_id', validate = 'one_to_one'
 df_train.shape, emb_train.shape
 
 
-# In[58]:
+# In[67]:
 
 
 emb_test = pd.read_csv(os.path.join(DIR_DATA, f'ttl_cln_emb_test_{MODEL_FOLDER}_{MAX_LENGTH}_pca{PCA_COMPONENTS}.csv'))
@@ -1152,20 +1243,20 @@ df_test = df_test.merge(emb_test, on = 'document_id', validate = 'one_to_one')
 df_test.shape, emb_test.shape
 
 
-# In[59]:
+# In[68]:
 
 
 num_cols = num_cols + list(emb_train.columns)
 
 
-# In[60]:
+# In[69]:
 
 
 if 'document_id' in num_cols:
     num_cols.remove('document_id')
 
 
-# In[61]:
+# In[70]:
 
 
 clmns['title']['num'].extend(emb_train.columns[1:])
@@ -1177,18 +1268,6 @@ clmns['title']['num'].extend(emb_train.columns[1:])
 
 
 
-# ## train_test_split
-
-# вероятно лучше разделять до нормализации и категориальных энкодеров, что бы значения из валидационной выборки не были в учтены в тесте   
-# однако, на первой итерации устроит и разбиение после всех преобразований
-
-# In[62]:
-
-
-x_train, x_val = train_test_split(df_train, stratify = df_train['category'], test_size = 0.2)
-df_train.shape, x_train.shape, x_val.shape
-
-
 # In[ ]:
 
 
@@ -1197,36 +1276,20 @@ df_train.shape, x_train.shape, x_val.shape
 
 # ## save
 
-# In[63]:
+# In[71]:
 
 
-df_test.shape, x_train.shape, x_val.shape, df_test.shape
+df_test.shape, df_test.shape
 
 
-# In[64]:
+# In[ ]:
 
 
 df_train.to_csv(os.path.join( DIR_DATA, 'train_upd.csv'))
 df_test.to_csv(os.path.join( DIR_DATA,  'test_upd.csv'))
-x_train.to_csv(os.path.join(DIR_DATA,   'x_train.csv'))
-x_val.to_csv(os.path.join(DIR_DATA,     'x_val.csv'))
 
 
-# In[65]:
-
-
-with open(os.path.join(DIR_DATA, 'num_columns.pkl'), 'wb') as pickle_file:
-    pkl.dump(num_cols, pickle_file)
-
-
-# In[66]:
-
-
-with open(os.path.join(DIR_DATA, 'cat_columns.pkl'), 'wb') as pickle_file:
-    pkl.dump(cat_cols, pickle_file)
-
-
-# In[67]:
+# In[ ]:
 
 
 with open(os.path.join(DIR_DATA, 'clmns.pkl'), 'wb') as pickle_file:

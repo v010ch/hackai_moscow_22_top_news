@@ -261,16 +261,16 @@ df_train.shape, df_train.index.nunique()
 
 # ## Targets
 
-# In[20]:
+# In[12]:
 
 
 df_train.views.nlargest(20)
 
 
-# In[24]:
+# In[17]:
 
 
-plot_corrc(df_train.query('views > 60000'), ['views'], ['depth', 'full_reads_percent'])
+plot_corrc(df_train, ['views'], ['depth', 'full_reads_percent'])
 
 
 # In[34]:
@@ -533,7 +533,13 @@ plot_corrc(df_train, ['views'], ['depth', 'full_reads_percent'])
 
 # # publish_date
 
-# In[ ]:
+# In[15]:
+
+
+border = pd.Timestamp('2022-04-08').date()
+
+
+# In[16]:
 
 
 df_train['publish_date'] = pd.to_datetime(df_train['publish_date'])

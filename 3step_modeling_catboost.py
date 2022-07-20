@@ -107,14 +107,13 @@ DIR_SUBM_PART = os.path.join(os.getcwd(), 'subm', 'partial')
 # In[8]:
 
 
-NTRY = 20
-NAME = f'{NTRY}_cb_pca64_sber_lags_parse_bord_nose_full'
+NTRY = 24
+NAME = f'{NTRY}_cb_pca64_sber_bord_nose_iter_poly'
 
 
 # In[9]:
 
 
-#CTR_UKR = 1.39808553
 VIEWS_UKR = 2554204
 DEPTH_UKR = 1.799
 FPR_UKR = 4.978
@@ -132,16 +131,8 @@ FPR_UKR = 4.978
 
 
 df_train = pd.read_csv(os.path.join(DIR_DATA, 'train_upd.csv'), index_col= 0)
-x_train  = pd.read_csv(os.path.join(DIR_DATA, 'x_train.csv'), index_col= 0)
-x_val    = pd.read_csv(os.path.join(DIR_DATA, 'x_val.csv'), index_col= 0)
 df_test  = pd.read_csv(os.path.join(DIR_DATA, 'test_upd.csv'), index_col= 0)
 
-#with open(os.path.join(DIR_DATA, 'cat_columns.pkl'), 'rb') as pickle_file:
-#    cat_cols = pkl.load(pickle_file)
-    
-#with open(os.path.join(DIR_DATA, 'num_columns.pkl'), 'rb') as pickle_file:
-#    num_cols = pkl.load(pickle_file)
-    
 with open(os.path.join(DIR_DATA, 'clmns.pkl'), 'rb') as pickle_file:
     clmns = pkl.load(pickle_file)
 
@@ -149,7 +140,7 @@ with open(os.path.join(DIR_DATA, 'clmns.pkl'), 'rb') as pickle_file:
 # In[11]:
 
 
-x_train.shape, x_val.shape, df_test.shape, #len(cat_cols), len(num_cols)
+df_train.shape, df_test.shape, 
 
 
 # In[ ]:
@@ -158,27 +149,13 @@ x_train.shape, x_val.shape, df_test.shape, #len(cat_cols), len(num_cols)
 
 
 
-# отделяем метки от данных
+# In[ ]:
+
+
+
+
 
 # In[12]:
-
-
-y_train = x_train[['views', 'depth', 'full_reads_percent']]
-y_val   = x_val[['views', 'depth', 'full_reads_percent']]
-
-x_train.drop(['views', 'depth', 'full_reads_percent'], axis = 1, inplace = True)
-x_val.drop(  ['views', 'depth', 'full_reads_percent'], axis = 1, inplace = True)
-
-x_train.shape, x_val.shape, y_train.shape, y_val.shape
-
-
-# In[ ]:
-
-
-
-
-
-# In[13]:
 
 
 cat_cols = []
@@ -191,7 +168,7 @@ for el in clmns.keys():
         print(clmns[el]['both'])
 
 
-# In[14]:
+# In[13]:
 
 
 num_cols.extend(['hour', 'mounth'])
@@ -200,6 +177,14 @@ cat_cols.extend(['dow',
                  'holiday', 'day_before_holiday', 'day_after_holiday', 'distrib_brdr',
                  #'spec_event_1',
                 ])
+
+
+# In[14]:
+
+
+for el in cat_cols:
+    df_train[el] = df_train[el].astype(str)
+    df_test[el] = df_test[el].astype(str)
 
 
 # In[ ]:
@@ -211,64 +196,26 @@ cat_cols.extend(['dow',
 # In[15]:
 
 
-for el in cat_cols:
-    df_train[el] = df_train[el].astype(str)
-    x_train[el] = x_train[el].astype(str)
-    x_val[el]   = x_val[el].astype(str)
-    df_test[el] = df_test[el].astype(str)
-
-
-# In[ ]:
-
-
-
-
-
-# In[16]:
-
-
 #views
-train_ds_views = Pool(x_train[cat_cols + num_cols],
-#train_ds_views = Pool(x_train[cat_cols + ['ctr']],
-                      y_train[['views']],
-                      cat_features = cat_cols,
-                      #feature_names = cat_cols + num_cols
-                     )
-
-val_ds_views   = Pool(x_val[cat_cols + num_cols],
-#val_ds_views   = Pool(x_val[cat_cols + ['ctr']],
-                      y_val[['views']],
-                      cat_features = cat_cols,
-                      #feature_names = cat_cols + num_cols
-                     )
 train_views_full = Pool(df_train[cat_cols + num_cols],
-#train_ds_views = Pool(x_train[cat_cols + ['ctr']],
                       df_train[['views']],
                       cat_features = cat_cols,
                       #feature_names = cat_cols + num_cols
                      )
 
-
-
 #depth
-train_ds_depth = Pool(x_train[cat_cols + num_cols],
-                      y_train[['depth']],
-                      cat_features = cat_cols,
-                      feature_names = cat_cols + num_cols
-                     )
-
-val_ds_depth   = Pool(x_val[cat_cols + num_cols],
-                      y_val[['depth']],
-                      cat_features = cat_cols,
-                      feature_names = cat_cols + num_cols
-                     )
 train_depth_full = Pool(df_train[cat_cols + num_cols],
-#train_ds_views = Pool(x_train[cat_cols + ['ctr']],
                       df_train[['depth']],
                       cat_features = cat_cols,
                       #feature_names = cat_cols + num_cols
                      )
 
+#frp
+train_frp_full = Pool(df_train[cat_cols + num_cols],
+                      df_train[['full_reads_percent']],
+                      cat_features = cat_cols,
+                      #feature_names = cat_cols + num_cols
+                     )
 
 #full_reads_percent
 #у frp корреляция с depth. так что добавим признак deprh_pred и соберем датасет уже после предсказания depth
@@ -280,7 +227,7 @@ train_depth_full = Pool(df_train[cat_cols + num_cols],
 
 
 
-# In[17]:
+# In[16]:
 
 
 def plot_feature_importance2(inp_model, inp_pool, imp_number = 30):
@@ -292,7 +239,7 @@ def plot_feature_importance2(inp_model, inp_pool, imp_number = 30):
     data.nlargest(imp_number, columns="feature_importance").plot(kind='barh', figsize = (30,16)) ## plot top 40 features
 
 
-# In[18]:
+# In[17]:
 
 
 def plot_feature_importance(importance,names,model_type, imp_number = 30):
@@ -326,10 +273,10 @@ def plot_feature_importance(importance,names,model_type, imp_number = 30):
 
 # ## views
 
-# In[53]:
+# In[18]:
 
 
-cb_params_views = {"iterations": 500,
+cb_params_views = {"iterations": 100,
                   #"depth": 2,
                   "loss_function": "RMSE",
                   'eval_metric': 'R2',
@@ -337,38 +284,46 @@ cb_params_views = {"iterations": 500,
                   }
 
 
-# In[54]:
+# In[19]:
 
 
 get_ipython().run_cell_magic('time', '', 'scores_views = cv(train_views_full,\n                  cb_params_views,\n                  fold_count=5,\n                  seed = CB_RANDOMSEED, \n                  #plot="True"\n                 )')
 
 
-# In[55]:
+# In[20]:
 
 
 #scores_views
 
 
-# In[57]:
+# In[52]:
+
+
+if scores_views['test-RMSE-mean'].argmin() != scores_views['test-R2-mean'].argmax():
+    raise ValueError('wtf?', scores_views['test-RMSE-mean'].argmin(), scores_views['test-R2-mean'].argmax())
+
+
+# In[22]:
 
 
 scores_views[scores_views['test-R2-mean'] == scores_views['test-R2-mean'].max()]
+#@ores_views.iloc[scores_views['test-R2-mean'].argmax()]
 
-99	99	0.487575	0.076982	0.660354	0.010815	42671.693769	14002.351624	35193.036169	2693.651339
+996	996	0.592591	0.095643	0.952982	0.004997	38079.381052	13904.016339	13045.641422	600.200488
 # In[ ]:
 
 
 
 
 
-# In[ ]:
+# In[23]:
 
 
 views_iter = scores_views['test-R2-mean'].argmax()
 print(views_iter)
 
 
-# In[52]:
+# In[24]:
 
 
 cb_model_views = CatBoostRegressor(iterations=views_iter,
@@ -378,37 +333,17 @@ cb_model_views = CatBoostRegressor(iterations=views_iter,
                                  #n_estimators=100,
                                   )
 # Fit model
-cb_model_views.fit(train_views_full#train_ds_views,
-                  #train_data, train_labels,
-                  #eval_set=val_ds_views, 
+cb_model_views.fit(train_views_full,
                   #plot = True,
+                   verbose = 100,
                   )
-
-
-# In[24]:
-
-
-# Get predictions and metrics
-preds_train_views = cb_model_views.predict(x_train[cat_cols + num_cols])
-preds_val_views   = cb_model_views.predict(val_ds_views)
-
-train_score_views = r2_score(y_train["views"], preds_train_views)
-val_score_views   = r2_score(y_val["views"],   preds_val_views)
-
-train_score_views, val_score_views
-
-(0.813655538047701, 0.5135620982050143) emb + pca 64 + lags + nauth + all_norm + parse + auth int + cat int
-# In[ ]:
-
-
-
 
 
 # In[25]:
 
 
 #plot_feature_importance(cb_model_views, train_ds_views, 30)
-plot_feature_importance(cb_model_views.get_feature_importance(), train_ds_views.get_feature_names(), 'CATBOOST')
+plot_feature_importance(cb_model_views.get_feature_importance(), train_views_full.get_feature_names(), 'CATBOOST')
 
 
 # In[ ]:
@@ -431,52 +366,48 @@ cb_params_depth = cb_params_views
 get_ipython().run_cell_magic('time', '', 'scores_depth = cv(train_depth_full,\n                  cb_params_depth,\n                  fold_count=5,\n                  seed = CB_RANDOMSEED, \n                  #plot="True"\n                 )')
 
 
-# In[28]:
+# In[49]:
 
 
-scores_depth[scores_depth['test-R2-mean'] == scores_depth['test-R2-mean'].max()]
+if scores_depth['test-RMSE-mean'].argmin() != scores_depth['test-R2-mean'].argmax():
+    raise ValueError('wtf?', scores_depth['test-RMSE-mean'].argmin(), scores_depth['test-R2-mean'].argmax())
 
-99	99	-0.248805	0.008272	-0.181515	0.019098	0.069002	0.002722	0.067162	0.000289
+
 # In[29]:
 
 
-cb_model_depth = CatBoostRegressor(#iterations=1000,
-                                 #learning_rate=0.05,
-                                 #depth=10,
-                                 random_seed = CB_RANDOMSEED,
-                                 n_estimators=100,
-                                  )
-# Fit model
-cb_model_depth.fit(train_depth_full#train_ds_depth,
-                   #eval_set=val_ds_depth, 
-                   #plot = True,
-                  )
+scores_depth[scores_depth['test-R2-mean'] == scores_depth['test-R2-mean'].max()]
+#scores_depth.iloc[scores_depth['test-R2-mean'].argmax()]
 
-
+998	998	0.802018	0.017199	0.938263	0.00201	0.027449	0.001461	0.015352	0.000314
 # In[30]:
 
 
-# Get predictions and metrics
-preds_train_depth = cb_model_depth.predict(x_train[cat_cols + num_cols])
-preds_val_depth   = cb_model_depth.predict(val_ds_depth)
+depth_iter =  scores_depth['test-R2-mean'].argmax()
+print(depth_iter)
 
-train_score_depth = r2_score(y_train["depth"], preds_train_depth)
-val_score_depth   = r2_score(y_val["depth"],   preds_val_depth)
 
-train_score_depth, val_score_depth
-
-(0.8800463832093552, 0.808425376066183) emb + pca 64 + lags + nauth + all_norm + parse + auth int + cat int
 # In[31]:
 
 
-x_train.shape
+cb_model_depth = CatBoostRegressor(iterations=depth_iter,
+                                 #learning_rate=0.05,
+                                 #depth=10,
+                                 random_seed = CB_RANDOMSEED,
+                                 #n_estimators=100,
+                                  )
+# Fit model
+cb_model_depth.fit(train_depth_full,
+                   #plot = True,
+                   verbose = 100,
+                  )
 
 
 # In[32]:
 
 
 #plot_feature_importance(cb_model_views, train_ds_views, 30)
-plot_feature_importance(cb_model_depth.get_feature_importance(), train_ds_depth.get_feature_names(), 'CATBOOST')
+plot_feature_importance(cb_model_depth.get_feature_importance(), train_depth_full.get_feature_names(), 'CATBOOST')
 
 
 # In[ ]:
@@ -490,129 +421,61 @@ plot_feature_importance(cb_model_depth.get_feature_importance(), train_ds_depth.
 # In[33]:
 
 
-#pd.DataFrame(preds_train_depth, columns = ['depth_pred'])
-pred_scaler = preprocessing.StandardScaler()
-tmp = pred_scaler.fit_transform(preds_train_depth.reshape(-1, 1))
-pred_depth_train = pd.DataFrame(tmp, columns = ['depth_pred'])
-
-pred_depth_val   = pd.DataFrame(pred_scaler.transform(preds_val_depth.reshape(-1, 1)), columns = ['depth_pred'])
-
-
-# In[ ]:
-
-
-
-
-print('before ', x_train.shape, x_val.shape, preds_train_depth.shape, preds_val_depth.shape)
-x_train = pd.concat([x_train, pred_depth_train], axis = 1)
-x_val   = pd.concat([x_val,   pred_depth_val],   axis = 1)
-print('after  ', x_train.shape, x_val.shape)
-# In[ ]:
-
-
-
+cb_params_frp = cb_params_views
 
 
 # In[34]:
 
 
-#train_ds_frp = Pool(x_train[cat_cols + num_cols + ['depth_pred']],
-train_ds_frp = Pool(x_train[cat_cols + num_cols],
-                      y_train[['full_reads_percent']],
-                      cat_features = cat_cols,
-                      feature_names = cat_cols + num_cols,
-                     )
-
-#val_ds_frp   = Pool(x_val[cat_cols + num_cols + ['depth_pred']],
-val_ds_frp   = Pool(x_val[cat_cols + num_cols],
-                      y_val[['full_reads_percent']],
-                      cat_features = cat_cols,
-                      feature_names = cat_cols + num_cols,
-                     )
-train_frp_full = Pool(df_train[cat_cols + num_cols],
-                      df_train[['full_reads_percent']],
-                      cat_features = cat_cols,
-                      #feature_names = cat_cols + num_cols
-                     )
-
-
-# In[35]:
-
-
-cb_params_frp = cb_params_views
+get_ipython().run_cell_magic('time', '', 'scores_frp = cv(train_frp_full,\n                  cb_params_frp,\n                  fold_count=5,\n                  seed = CB_RANDOMSEED, \n                  #plot="True"\n                 )')
 
 
 # In[36]:
 
 
-get_ipython().run_cell_magic('time', '', 'scores_frp = cv(train_frp_full,\n                  cb_params_frp,\n                  fold_count=5,\n                  seed = CB_RANDOMSEED, \n                  #plot="True"\n                 )')
+if scores_frp['test-RMSE-mean'].argmin() != scores_frp['test-R2-mean'].argmax():
+    raise ValueError('wtf?', scores_frp['test-RMSE-mean'].argmin(), scores_frp['test-R2-mean'].argmax())
 
 
 # In[37]:
 
 
 scores_frp[scores_frp['test-R2-mean'] == scores_frp['test-R2-mean'].max()]
+#scores_frp.iloc[scores_frp['test-R2-mean'].argmax()]
 
-99	99	0.390668	0.013571	0.420722	0.004774	7.911234	0.213452	7.71969	0.041776
+999	999	0.579495	0.008608	0.820714	0.003633	6.572665	0.196964	4.294636	0.058588
 # In[38]:
 
 
-cb_model_frp = CatBoostRegressor(#iterations=1000,
-                                 #learning_rate=0.05,
-                                 #depth=10,
-                                 random_seed = CB_RANDOMSEED,
-                                 n_estimators=100,
-                                 #n_estimators=100,
-    #num_trees=None,
-                                )
-# Fit model
-cb_model_frp.fit(train_frp_full#train_ds_frp,
-                   #eval_set=val_ds_frp, 
-                   #plot = True,
-                  )
+frp_iter = scores_frp['test-R2-mean'].argmax()
+print(frp_iter)
 
 
 # In[39]:
 
 
-# Get predictions and metrics
-preds_train_frp = cb_model_frp.predict(x_train[cat_cols + num_cols])
-preds_val_frp   = cb_model_frp.predict(val_ds_frp)
-
-train_score_frp = r2_score(y_train["full_reads_percent"], preds_train_frp)
-val_score_frp   = r2_score(y_val["full_reads_percent"],   preds_val_frp)
-
-train_score_frp, val_score_frp
-
-(0.6957481571111437, 0.5514259880860194) emb + pca 64 + lags + nauth + all_norm + parse + auth int + cat int
-# In[ ]:
-
-
-
+cb_model_frp = CatBoostRegressor(iterations=frp_iter,
+                                 #learning_rate=0.05,
+                                 #depth=10,
+                                 random_seed = CB_RANDOMSEED,
+                                 #n_estimators=100,
+    #num_trees=None,
+                                )
+# Fit model
+cb_model_frp.fit(train_frp_full,#train_ds_frp,
+                   #eval_set=val_ds_frp, 
+                   #plot = True,
+                 verbose = 100,
+                  )
 
 
 # In[40]:
 
 
 #plot_feature_importance(cb_model_views, train_ds_views, 30)
-plot_feature_importance(cb_model_frp.get_feature_importance(), train_ds_frp.get_feature_names(), 'CATBOOST')
+plot_feature_importance(cb_model_frp.get_feature_importance(), train_frp_full.get_feature_names(), 'CATBOOST')
 
 
-# In[ ]:
-
-
-
-
-
-# In[41]:
-
-
-score_train = 0.4 * train_score_views + 0.3 * train_score_depth + 0.3 * train_score_frp
-score_val  = 0.4 * val_score_views  + 0.3 * val_score_depth  + 0.3 * val_score_frp
-
-score_train, score_val
-
-(0.7982005773152301, 0.6133802485276665) 19 emb + pca 64 + lags + nauth + all_norm + parse + auth int + cat int
 # In[ ]:
 
 
@@ -626,10 +489,6 @@ score_train, score_val
 
 
 # ## Сохраняем предсказания для ансамблей / стекинга
-
-# In[42]:
-
-
 x_train_pred = x_train[['document_id']]
 x_val_pred   = x_val[['document_id']]
 
@@ -656,8 +515,6 @@ print('after ', x_val_pred.shape)
 
 x_train_pred.to_csv(os.path.join(DIR_SUBM_PART, f'{NAME}_train_part.csv'), index = False)
 x_val_pred.to_csv(os.path.join(DIR_SUBM_PART, f'{NAME}_val_part.csv'), index = False)
-
-
 # In[ ]:
 
 
@@ -684,7 +541,7 @@ x_val_pred.to_csv(os.path.join(DIR_SUBM_PART, f'{NAME}_val_part.csv'), index = F
 
 
 
-# In[43]:
+# In[41]:
 
 
 #cb_model_views.save_model(os.path.join(DIR_MODELS, f'{NTRY}_pca64_cb_views.cbm'), 
@@ -713,9 +570,21 @@ cb_model_frp.save_model(os.path.join(DIR_MODELS, f'{NAME}_f.cbm'),
 
 
 
+# In[ ]:
+
+
+
+
+
+# In[ ]:
+
+
+
+
+
 # ## make predict
 
-# In[44]:
+# In[42]:
 
 
 pred_views = cb_model_views.predict(df_test[cat_cols + num_cols])
@@ -723,7 +592,7 @@ pred_depth = cb_model_depth.predict(df_test[cat_cols + num_cols])
 pred_frp   = cb_model_frp.predict(  df_test[cat_cols + num_cols])
 
 
-# In[45]:
+# In[43]:
 
 
 subm = pd.DataFrame()
@@ -734,14 +603,14 @@ subm['depth'] = pred_depth
 subm['full_reads_percent'] = pred_frp
 
 
-# In[46]:
+# In[44]:
 
 
 doc_id_ukr = df_test[df_test.spec == 1].document_id.values
 subm.query('document_id in @doc_id_ukr')[['views', 'depth', 'full_reads_percent']]
 
 
-# In[47]:
+# In[45]:
 
 
 # присваиваем статичные данные
@@ -758,28 +627,16 @@ subm.query('document_id in @doc_id_ukr')[['views', 'depth', 'full_reads_percent'
 
 
 
-# In[48]:
+# In[46]:
 
 
 subm.head()
 
 
-# In[49]:
+# In[47]:
 
 
 subm.to_csv(os.path.join(DIR_SUBM, f'{NAME}.csv'), index = False)
-
-
-# In[50]:
-
-
-df_train.columns
-
-
-# In[ ]:
-
-
-
 
 
 # In[ ]:

@@ -48,11 +48,11 @@ DIR_SUBM_PART = os.path.join(os.getcwd(), 'subm', 'partial')
 # In[4]:
 
 
-NTRY = 20
+NTRY = 24
 #NAME = f'{NTRY}_cb_pca64_sber_lags_parse_bord_nose'
-NAME_CB  = f'{NTRY}_cb_pca64_sber_lags_parse_bord_nose_cat'
-NAME_XGB = f'{NTRY}_xgb_pca64_sber_lags_parse_bord_nose_cat'
-NAME_LGB = f'{NTRY}_lgb_pca64_sber_lags_parse_bord_nose_cat'
+#NAME_CB  = f'{NTRY}_cb_pca64_sber_lags_parse_bord_nose_cat'
+#NAME_XGB = f'{NTRY}_xgb_pca64_sber_lags_parse_bord_nose_cat'
+#NAME_LGB = f'{NTRY}_lgb_pca64_sber_lags_parse_bord_nose_cat'
 #xgb_pca64_sber_lags_parse_bord_nose_val_part
 
 
@@ -97,9 +97,9 @@ XGB_RANDOMSEED = 56
 
 
 #subm_views = pd.read_csv(os.path.join(DIR_SUBM, f'1_xgb_baseline_test.csv'),  usecols=['document_id', 'views'])
-subm_views = pd.read_csv(os.path.join(DIR_SUBM, f'{NTRY}_lgb_pca64_sber_lags_parse_bord_nose_full.csv'),  usecols=['document_id', 'views'])
-subm_depth = pd.read_csv(os.path.join(DIR_SUBM, f'{NTRY}_lgb_pca64_sber_lags_parse_bord_nose_full.csv'), usecols=['document_id', 'depth'])
-subm_frp   = pd.read_csv(os.path.join(DIR_SUBM, f'{NTRY}_lgb_pca64_sber_lags_parse_bord_nose_full.csv'), usecols=['document_id', 'full_reads_percent'])
+subm_views = pd.read_csv(os.path.join(DIR_SUBM, f'{NTRY}_lgb_pca64_sber_bord_nose_iter_poly.csv'),  usecols=['document_id', 'views'])
+subm_depth = pd.read_csv(os.path.join(DIR_SUBM, f'{NTRY}_lgb_pca64_sber_bord_nose_iter_poly.csv'), usecols=['document_id', 'depth'])
+subm_frp   = pd.read_csv(os.path.join(DIR_SUBM, f'{NTRY}_lgb_pca64_sber_bord_nose_iter_poly.csv'), usecols=['document_id', 'full_reads_percent'])
 
 #ubm_depth = pd.read_csv(os.path.join(DIR_SUBM, f'{NTRY}_lgb_pca64_sber_lags_parse_bord_nose_irq.csv'), usecols=['document_id', 'depth'])
 #ubm_frp   = pd.read_csv(os.path.join(DIR_SUBM, f'14_lgb_pca64_sber_lags_parse_bord_nose.csv'),   usecols=['document_id', 'full_reads_percent'])
