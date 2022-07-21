@@ -116,8 +116,8 @@ DIR_SUBM_PART = os.path.join(os.getcwd(), 'subm', 'partial')
 # In[9]:
 
 
-NTRY = 24
-NAME = f'{NTRY}_lgb_pca64_sber_bord_nose_iter_poly'
+NTRY = 25
+NAME = f'{NTRY}_lgb_pca64_sber_bord_nose_iter_2mod'
 
 
 # In[10]:
@@ -178,7 +178,7 @@ for el in clmns.keys():
 num_cols.extend(['hour', 'mounth'])
 cat_cols.extend([ 'dow',
                 'ph_report', 'ph_gallery', 'tv_prog', 'online', 'video', 'infogr',
-                 'holiday', 'day_before_holiday', 'day_after_holiday', 'distrib_brdr',
+                 'holiday', 'day_before_holiday', 'day_after_holiday', #'distrib_brdr',
                  #'spec_event_1',
                 ])
 
@@ -309,32 +309,51 @@ def train_lgb_cat(inp_df, inp_vals, inp_category, inp_cat_cols, inp_num_cols):
 
 
 
-# In[ ]:
-
-
-
-
-
 # In[18]:
 
 
+df_train[df_train.distrib_brdr == 1].shape, df_train[df_train.distrib_brdr == 0].shape
+
+
+# In[19]:
+
+
+df_test[df_test.distrib_brdr == 1].shape, df_test[df_test.distrib_brdr == 0].shape
+
+
+# In[20]:
+
+
 #views
-train_views_full = lgb.Dataset(df_train[cat_cols + num_cols],
-                             df_train[['views']],
+train_views_start = lgb.Dataset(df_train[df_train.distrib_brdr == 1][cat_cols + num_cols],
+                             df_train[df_train.distrib_brdr == 1][['views']],
                              #feature_name = [cat_cols + num_cols]
                             )
+train_views_end = lgb.Dataset(df_train[df_train.distrib_brdr == 0][cat_cols + num_cols],
+                             df_train[df_train.distrib_brdr == 0][['views']],
+                             #feature_name = [cat_cols + num_cols]
+                            )
+
 #lgb_eval = lgb.Dataset(x_test, y_test, reference=lgb_train)
 
 
 #depth
-train_depth_full = lgb.Dataset(df_train[cat_cols + num_cols],
-                             df_train[['depth']],
+train_depth_start = lgb.Dataset(df_train[df_train.distrib_brdr == 1][cat_cols + num_cols],
+                             df_train[df_train.distrib_brdr == 1][['depth']],
+                             #feature_name = [cat_cols + num_cols]
+                            )
+train_depth_end = lgb.Dataset(df_train[df_train.distrib_brdr == 0][cat_cols + num_cols],
+                             df_train[df_train.distrib_brdr == 0][['depth']],
                              #feature_name = [cat_cols + num_cols]
                             )
 
 #full_reads_percent
-train_frp_full = lgb.Dataset(df_train[cat_cols + num_cols],
-                             df_train[['full_reads_percent']],
+train_frp_start = lgb.Dataset(df_train[df_train.distrib_brdr == 1][cat_cols + num_cols],
+                             df_train[df_train.distrib_brdr == 1][['full_reads_percent']],
+                             #feature_name = [cat_cols + num_cols]
+                            )
+train_frp_end = lgb.Dataset(df_train[df_train.distrib_brdr == 0][cat_cols + num_cols],
+                             df_train[df_train.distrib_brdr == 0][['full_reads_percent']],
                              #feature_name = [cat_cols + num_cols]
                             )
 
@@ -356,7 +375,7 @@ dart, Dropouts meet Multiple Additive Regression Trees
 goss, Gradient-based One-Side Sampling
 # ## views
 
-# In[19]:
+# In[21]:
 
 
 # defining parameters 
@@ -380,48 +399,103 @@ params = {
 }
 
 
-# In[20]:
+# In[ ]:
 
 
-get_ipython().run_cell_magic('time', '', "score_v = lgb.cv(params, \n                 train_views_full, \n                 #num_boost_round = 10000,\n                 num_boost_round=600,\n                 nfold = 5,\n                 verbose_eval = 500,\n                 #early_stopping_rounds = 100,\n                 stratified = False,\n                 eval_train_metric = r2,\n                 feval = r2,\n                 #return_cvbooster = True,\n                )\nprint(np.argmin(score_v['valid rmse-mean']), score_v['train rmse-mean'][np.argmin(score_v['valid rmse-mean'])], score_v['train rmse-stdv'][np.argmin(score_v['valid rmse-mean'])], )\nprint(np.argmin(score_v['valid rmse-mean']), score_v['valid rmse-mean'][np.argmin(score_v['valid rmse-mean'])], score_v['valid rmse-stdv'][np.argmin(score_v['valid rmse-mean'])], )\n\nprint(np.argmax(score_v['valid r2-mean']), score_v['train r2-mean'][np.argmax(score_v['valid r2-mean'])], score_v['train r2-stdv'][np.argmax(score_v['valid r2-mean'])], )\nprint(np.argmax(score_v['valid r2-mean']), score_v['valid r2-mean'][np.argmax(score_v['valid r2-mean'])], score_v['valid r2-stdv'][np.argmax(score_v['valid r2-mean'])], )")
 
-
-# In[21]:
-
-
-#score_v.keys()
 
 
 # In[22]:
 
 
-#if np.argmin(score_v['valid rmse-mean']) != np.argmax(score_v['valid r2-mean']):
-#    raise ValueError('wtf?', np.argmin(score_v['valid rmse-mean']), np.argmax(score_v['valid r2-mean']))
+def get_model(inp_ds, inp_params):
+    
+    score = lgb.cv(inp_params, 
+                 inp_ds, 
+                 #num_boost_round = 10000,
+                 num_boost_round=600,
+                 nfold = 5,
+                 verbose_eval = 500,
+                 #early_stopping_rounds = 100,
+                 stratified = False,
+                 eval_train_metric = r2,
+                 feval = r2,
+                 #return_cvbooster = True,
+                )
+    print(np.argmin(score['valid rmse-mean']), score['train rmse-mean'][np.argmin(score['valid rmse-mean'])], score['train rmse-stdv'][np.argmin(score['valid rmse-mean'])], )
+    print(np.argmin(score['valid rmse-mean']), score['valid rmse-mean'][np.argmin(score['valid rmse-mean'])], score['valid rmse-stdv'][np.argmin(score['valid rmse-mean'])], )
 
-1661 48897.91696678655 9179.139175918961
+    print(np.argmax(score['valid r2-mean']), score['train r2-mean'][np.argmax(score['valid r2-mean'])], score['train r2-stdv'][np.argmax(score['valid r2-mean'])], )
+    print(np.argmax(score['valid r2-mean']), score['valid r2-mean'][np.argmax(score['valid r2-mean'])], score['valid r2-stdv'][np.argmax(score['valid r2-mean'])], )
+    
+    
+    niters = np.argmin(score['valid rmse-mean'])
+    print(niters)
+    
+    lgb_model = lgb.train(inp_params,
+                            train_set = inp_ds,
+                            num_boost_round = niters,
+                            #early_stopping_rounds=30,
+                            verbose_eval = False,
+                           )
+    
+    
+    return lgb_model
+
+
+# In[ ]:
+
+
+
+
+%%time
+score_v_s = lgb.cv(params, 
+                 train_views_full_start, 
+                 #num_boost_round = 10000,
+                 num_boost_round=600,
+                 nfold = 5,
+                 verbose_eval = 500,
+                 #early_stopping_rounds = 100,
+                 stratified = False,
+                 eval_train_metric = r2,
+                 feval = r2,
+                 #return_cvbooster = True,
+                )
+print(np.argmin(score_v_s['valid rmse-mean']), score_v_s['train rmse-mean'][np.argmin(score_v_s['valid rmse-mean'])], score_v_s['train rmse-stdv'][np.argmin(score_v_s['valid rmse-mean'])], )
+print(np.argmin(score_v_s['valid rmse-mean']), score_v_s['valid rmse-mean'][np.argmin(score_v_s['valid rmse-mean'])], score_v_s['valid rmse-stdv'][np.argmin(score_v_s['valid rmse-mean'])], )
+
+print(np.argmax(score_v_s['valid r2-mean']), score_v_s['train r2-mean'][np.argmax(score_v_s['valid r2-mean'])], score_v_s['train r2-stdv'][np.argmax(score_v_s['valid r2-mean'])], )
+print(np.argmax(score_v_s['valid r2-mean']), score_v_s['valid r2-mean'][np.argmax(score_v_s['valid r2-mean'])], score_v_s['valid r2-stdv'][np.argmax(score_v_s['valid r2-mean'])], )
 # In[23]:
 
 
-#views_iter = np.argmax(score_v['valid r2-mean'])
-views_iter = np.argmin(score_v['valid rmse-mean'])
-print(views_iter)
+#score_v.keys()
 
 
 # In[24]:
 
 
-lgb_model_views = lgb.train(params,
-                            train_set=train_views_full,
+#if np.argmin(score_v['valid rmse-mean']) != np.argmax(score_v['valid r2-mean']):
+#    raise ValueError('wtf?', np.argmin(score_v['valid rmse-mean']), np.argmax(score_v['valid r2-mean']))
+
+1661 48897.91696678655 9179.139175918961#views_iter = np.argmax(score_v['valid r2-mean'])
+views_start_iter = np.argmin(score_v['valid rmse-mean'])
+print(views_iter)lgb_model_views = lgb.train(params,
+                            train_set=train_views_full_start,
                             num_boost_round = views_iter,
                             #early_stopping_rounds=30,
                             verbose_eval = False,
                            )
-
-
 # In[25]:
 
 
-lgb.plot_importance(lgb_model_views, max_num_features = 30, figsize = (30, 16), importance_type = 'gain')
+get_ipython().run_cell_magic('time', '', 'lgb_model_views_start = get_model(train_views_start, params)')
+
+
+# In[26]:
+
+
+lgb.plot_importance(lgb_model_views_start, max_num_features = 30, figsize = (30, 16), importance_type = 'gain')
 #lgb.plot_importance(lgb_model_views, max_num_features = 30, figsize = (30, 16), importance_type = 'split')
 # importance_type (str, optional (default="auto")) – How the importance is calculated. If “auto”, if booster parameter is LGBMModel, booster.importance_type attribute is used; 
 # “split” otherwise. If “split”, result contains numbers of times the feature is used in a model. If “gain”, result contains total gains of splits which use the feature.
@@ -439,9 +513,39 @@ lgb.plot_importance(lgb_model_views, max_num_features = 30, figsize = (30, 16), 
 
 
 
+# In[27]:
+
+
+get_ipython().run_cell_magic('time', '', 'lgb_model_views_end = get_model(train_views_end, params)')
+
+
+# In[28]:
+
+
+lgb.plot_importance(lgb_model_views_start, max_num_features = 30, figsize = (30, 16), importance_type = 'gain')
+
+
+# In[ ]:
+
+
+
+
+
+# In[ ]:
+
+
+
+
+
+# In[ ]:
+
+
+
+
+
 # ## depth
 
-# In[26]:
+# In[29]:
 
 
 # defining parameters 
@@ -464,43 +568,79 @@ params = {
     'random_seed': LGB_RANDOMSEED,
 }
 
+%%time
+score_d = lgb.cv(params, 
+                 train_depth_full, 
+                 #num_boost_round = 10000,
+                 num_boost_round=600,
+                 nfold = 5,
+                 verbose_eval = 500,
+                 #early_stopping_rounds = 100,
+                 stratified = False,
+                 eval_train_metric = r2,
+                 feval = r2,
+                 #return_cvbooster = True,
+                )
+print(np.argmin(score_d['valid rmse-mean']), score_d['train rmse-mean'][np.argmin(score_d['valid rmse-mean'])], score_d['train rmse-stdv'][np.argmin(score_d['valid rmse-mean'])], )
+print(np.argmin(score_d['valid rmse-mean']), score_d['valid rmse-mean'][np.argmin(score_d['valid rmse-mean'])], score_d['valid rmse-stdv'][np.argmin(score_d['valid rmse-mean'])], )
 
-# In[45]:
-
-
-get_ipython().run_cell_magic('time', '', "score_d = lgb.cv(params, \n                 train_depth_full, \n                 #num_boost_round = 10000,\n                 num_boost_round=600,\n                 nfold = 5,\n                 verbose_eval = 500,\n                 #early_stopping_rounds = 100,\n                 stratified = False,\n                 eval_train_metric = r2,\n                 feval = r2,\n                 #return_cvbooster = True,\n                )\nprint(np.argmin(score_d['valid rmse-mean']), score_d['train rmse-mean'][np.argmin(score_d['valid rmse-mean'])], score_d['train rmse-stdv'][np.argmin(score_d['valid rmse-mean'])], )\nprint(np.argmin(score_d['valid rmse-mean']), score_d['valid rmse-mean'][np.argmin(score_d['valid rmse-mean'])], score_d['valid rmse-stdv'][np.argmin(score_d['valid rmse-mean'])], )\n\nprint(np.argmax(score_d['valid r2-mean']), score_d['train r2-mean'][np.argmax(score_d['valid r2-mean'])], score_d['train r2-stdv'][np.argmax(score_d['valid r2-mean'])], )\nprint(np.argmax(score_d['valid r2-mean']), score_d['valid r2-mean'][np.argmax(score_d['valid r2-mean'])], score_d['valid r2-stdv'][np.argmax(score_d['valid r2-mean'])], )")
-
-378 0.02735314197033909 0.0009451007887406206
-# In[28]:
+print(np.argmax(score_d['valid r2-mean']), score_d['train r2-mean'][np.argmax(score_d['valid r2-mean'])], score_d['train r2-stdv'][np.argmax(score_d['valid r2-mean'])], )
+print(np.argmax(score_d['valid r2-mean']), score_d['valid r2-mean'][np.argmax(score_d['valid r2-mean'])], score_d['valid r2-stdv'][np.argmax(score_d['valid r2-mean'])], )378 0.02735314197033909 0.0009451007887406206
+# In[30]:
 
 
 #if np.argmin(score_d['valid rmse-mean']) != np.argmax(score_d['valid r2-mean']):
 #    raise ValueError('wtf?', np.argmin(score_d['valid rmse-mean']), np.argmax(score_d['valid r2-mean']))
 
-
-# In[29]:
-
-
 #depth_iter = np.argmax(score_d['valid r2-mean'])
 depth_iter = np.argmin(score_d['valid rmse-mean'])
-print(depth_iter)
-
-
-# In[30]:
-
-
-# fitting the model
+print(depth_iter)# fitting the model
 lgb_model_depth = lgb.train(params,
                             train_set=train_depth_full,
                             num_boost_round = depth_iter,
                             verbose_eval = False,
                            )
+# In[ ]:
+
+
+
 
 
 # In[31]:
 
 
-lgb.plot_importance(lgb_model_depth, max_num_features = 30, figsize = (30, 16), importance_type = 'gain')
+get_ipython().run_cell_magic('time', '', 'lgb_model_depth_start = get_model(train_depth_start, params)')
+
+
+# In[32]:
+
+
+lgb.plot_importance(lgb_model_depth_start, max_num_features = 30, figsize = (30, 16), importance_type = 'gain')
+#lgb.plot_importance(lgb_model_depth, max_num_features = 30, figsize = (30, 16), importance_type = 'split')
+
+
+# In[ ]:
+
+
+
+
+
+# In[ ]:
+
+
+
+
+
+# In[33]:
+
+
+get_ipython().run_cell_magic('time', '', 'lgb_model_depth_end = get_model(train_depth_end, params)')
+
+
+# In[34]:
+
+
+lgb.plot_importance(lgb_model_depth_end, max_num_features = 30, figsize = (30, 16), importance_type = 'gain')
 #lgb.plot_importance(lgb_model_depth, max_num_features = 30, figsize = (30, 16), importance_type = 'split')
 
 
@@ -511,10 +651,6 @@ lgb.plot_importance(lgb_model_depth, max_num_features = 30, figsize = (30, 16), 
 
 
 # ## full_reads_percent
-
-# In[32]:
-
-
 score_f = lgb.cv(params, 
                  train_frp_full, 
                  #num_boost_round = 10000,
@@ -531,25 +667,17 @@ print(np.argmin(score_f['valid rmse-mean']), score_f['train rmse-mean'][np.argmi
 print(np.argmin(score_f['valid rmse-mean']), score_f['valid rmse-mean'][np.argmin(score_f['valid rmse-mean'])], score_f['valid rmse-stdv'][np.argmin(score_f['valid rmse-mean'])], )
 
 print(np.argmax(score_f['valid r2-mean']), score_f['train r2-mean'][np.argmax(score_f['valid r2-mean'])], score_f['train r2-stdv'][np.argmax(score_f['valid r2-mean'])], )
-print(np.argmax(score_f['valid r2-mean']), score_f['valid r2-mean'][np.argmax(score_f['valid r2-mean'])], score_f['valid r2-stdv'][np.argmax(score_f['valid r2-mean'])], )
-
-163 7.02038356002961 0.1360496068604094   / 116 / 111
-# In[33]:
+print(np.argmax(score_f['valid r2-mean']), score_f['valid r2-mean'][np.argmax(score_f['valid r2-mean'])], score_f['valid r2-stdv'][np.argmax(score_f['valid r2-mean'])], )163 7.02038356002961 0.1360496068604094   / 116 / 111
+# In[35]:
 
 
 #if np.argmin(score_f['valid rmse-mean']) != np.argmax(score_f['valid r2-mean']):
 #    raise ValueError('wtf?', np.argmin(score_f['valid rmse-mean']), np.argmax(score_f['valid r2-mean']))
 
-
-# In[34]:
-
-
 #frp_iter = np.argmax(score_f['valid r2-mean'])
 frp_iter = np.argmin(score_f['valid rmse-mean'])
 print(frp_iter)
-
-
-# In[35]:
+# In[36]:
 
 
 # defining parameters 
@@ -572,10 +700,6 @@ params = {
     'random_seed': LGB_RANDOMSEED,
 }
 
-
-# In[36]:
-
-
 # fitting the model
 lgb_model_frp = lgb.train(params,
                             train_set=train_frp_full,#train_set=train_ds_frp,
@@ -584,12 +708,41 @@ lgb_model_frp = lgb.train(params,
                             #early_stopping_rounds=30,
                             verbose_eval = False,
                            )
-
-
 # In[37]:
 
 
-lgb.plot_importance(lgb_model_frp, max_num_features = 30, figsize = (30, 16), importance_type = 'gain')
+get_ipython().run_cell_magic('time', '', 'lgb_model_frp_start = get_model(train_frp_start, params)')
+
+
+# In[38]:
+
+
+lgb.plot_importance(lgb_model_frp_start, max_num_features = 30, figsize = (30, 16), importance_type = 'gain')
+#lgb.plot_importance(lgb_model_frp, max_num_features = 30, figsize = (30, 16), importance_type = 'split')
+
+
+# In[ ]:
+
+
+
+
+
+# In[ ]:
+
+
+
+
+
+# In[39]:
+
+
+get_ipython().run_cell_magic('time', '', 'lgb_model_frp_end = get_model(train_frp_end, params)')
+
+
+# In[40]:
+
+
+lgb.plot_importance(lgb_model_frp_start, max_num_features = 30, figsize = (30, 16), importance_type = 'gain')
 #lgb.plot_importance(lgb_model_frp, max_num_features = 30, figsize = (30, 16), importance_type = 'split')
 
 
@@ -640,12 +793,15 @@ x_val_pred.to_csv(os.path.join(DIR_SUBM_PART, f'{NAME}_val_part.csv'), index = F
 
 # ## save models
 
-# In[38]:
+# In[41]:
 
 
-lgb_model_views.save_model(os.path.join(DIR_MODELS, f'{NAME}_v.txt'), num_iteration = lgb_model_views.best_iteration)
-lgb_model_depth.save_model(os.path.join(DIR_MODELS, f'{NAME}_d.txt'), num_iteration = lgb_model_depth.best_iteration)
-lgb_model_frp.save_model(  os.path.join(DIR_MODELS, f'{NAME}_f.txt'),   num_iteration = lgb_model_frp.best_iteration)
+lgb_model_views_start.save_model(os.path.join(DIR_MODELS, f'{NAME}_v_start.txt'), num_iteration = lgb_model_views_start.best_iteration)
+lgb_model_views_end.save_model(  os.path.join(DIR_MODELS, f'{NAME}_v_end.txt'),   num_iteration = lgb_model_views_end.best_iteration)
+lgb_model_depth_start.save_model(os.path.join(DIR_MODELS, f'{NAME}_d_start.txt'), num_iteration = lgb_model_depth_start.best_iteration)
+lgb_model_depth_end.save_model(  os.path.join(DIR_MODELS, f'{NAME}_d_end.txt'),   num_iteration = lgb_model_depth_end.best_iteration)
+lgb_model_frp_start.save_model(  os.path.join(DIR_MODELS, f'{NAME}_f_start.txt'), num_iteration = lgb_model_frp_start.best_iteration)
+lgb_model_frp_end.save_model(    os.path.join(DIR_MODELS, f'{NAME}_f_end.txt'),   num_iteration = lgb_model_frp_end.best_iteration)
 
 
 # In[ ]:
@@ -654,35 +810,132 @@ lgb_model_frp.save_model(  os.path.join(DIR_MODELS, f'{NAME}_f.txt'),   num_iter
 
 
 
-# ## make predict
+# ## Делаем предсказание трейна для ансамблей
 
-# In[39]:
+# In[59]:
 
 
+pred_train = pd.DataFrame()
+pred_train[['document_id', 'distrib_brdr']] = df_train[['document_id', 'distrib_brdr']]
+pred_train = pred_train.reindex(['document_id', 'distrib_brdr', 'views', 'depth', 'full_reads_percent'], axis = 1)
+
+
+# In[60]:
+
+
+pred_train.loc[pred_train.query('distrib_brdr == 1').index, 'views'] = lgb_model_views_start.predict(df_train[df_train.distrib_brdr == 1][cat_cols + num_cols])
+pred_train.loc[pred_train.query('distrib_brdr == 0').index, 'views'] = lgb_model_views_end.predict(df_train[df_train.distrib_brdr == 0][cat_cols + num_cols])
+print(sum(pred_train.views.isna()), ' Nan in views')
+
+
+# In[63]:
+
+
+pred_train.loc[pred_train.query('distrib_brdr == 1').index, 'depth'] = lgb_model_depth_start.predict(df_train[df_train.distrib_brdr == 1][cat_cols + num_cols])
+pred_train.loc[pred_train.query('distrib_brdr == 0').index, 'depth'] = lgb_model_depth_end.predict(df_train[df_train.distrib_brdr == 0][cat_cols + num_cols])
+print(sum(pred_train.depth.isna()), ' Nan in depth')
+
+
+# In[64]:
+
+
+pred_train.loc[pred_train.query('distrib_brdr == 1').index, 'full_reads_percent'] = lgb_model_frp_start.predict(df_train[df_train.distrib_brdr == 1][cat_cols + num_cols])
+pred_train.loc[pred_train.query('distrib_brdr == 0').index, 'full_reads_percent'] = lgb_model_frp_end.predict(df_train[df_train.distrib_brdr == 0][cat_cols + num_cols])
+print(sum(pred_train.full_reads_percent.isna()), ' Nan in full_reads_percent')
+
+
+# In[65]:
+
+
+pred_train.drop(['distrib_brdr'], axis =1, inplace = True)
+pred_train.to_csv(os.path.join(DIR_SUBM_PART, f'{NAME}_train_part.csv'), index = False)
+
+
+# In[ ]:
+
+
+
+
+
+# In[ ]:
+
+
+
+
+
+# In[ ]:
+
+
+
+
+
+# In[ ]:
+
+
+
+
+
+# # Делаем предсказание для теста
 pred_views = lgb_model_views.predict(df_test[cat_cols + num_cols])
 pred_depth = lgb_model_depth.predict(df_test[cat_cols + num_cols])
-pred_frp   = lgb_model_frp.predict(  df_test[cat_cols + num_cols])
-
-
-# In[40]:
-
-
-subm = pd.DataFrame()
+pred_frp   = lgb_model_frp.predict(  df_test[cat_cols + num_cols])subm = pd.DataFrame()
 subm['document_id'] = df_test.document_id
 
 subm['views'] = pred_views
 subm['depth'] = pred_depth
 subm['full_reads_percent'] = pred_frp
+# In[47]:
 
 
-# In[41]:
+subm = pd.DataFrame()
+subm[['document_id', 'distrib_brdr']] = df_test[['document_id', 'distrib_brdr']]
+subm = subm.reindex(['document_id', 'distrib_brdr', 'views', 'depth', 'full_reads_percent'], axis = 1)
+
+
+# In[48]:
+
+
+subm.loc[subm.query('distrib_brdr == 1').index, 'views'] = lgb_model_views_start.predict(df_test[df_test.distrib_brdr == 1][cat_cols + num_cols])
+subm.loc[subm.query('distrib_brdr == 0').index, 'views'] = lgb_model_views_end.predict(df_test[df_test.distrib_brdr == 0][cat_cols + num_cols])
+sum(subm.views.isna())
+
+
+# In[49]:
+
+
+subm.loc[subm.query('distrib_brdr == 1').index, 'depth'] = lgb_model_depth_start.predict(df_test[df_test.distrib_brdr == 1][cat_cols + num_cols])
+subm.loc[subm.query('distrib_brdr == 0').index, 'depth'] = lgb_model_depth_end.predict(df_test[df_test.distrib_brdr == 0][cat_cols + num_cols])
+sum(subm.depth.isna())
+
+
+# In[50]:
+
+
+subm.loc[subm.query('distrib_brdr == 1').index, 'full_reads_percent'] = lgb_model_frp_start.predict(df_test[df_test.distrib_brdr == 1][cat_cols + num_cols])
+subm.loc[subm.query('distrib_brdr == 0').index, 'full_reads_percent'] = lgb_model_frp_end.predict(df_test[df_test.distrib_brdr == 0][cat_cols + num_cols])
+sum(subm.full_reads_percent.isna())
+
+
+# In[51]:
+
+
+subm.drop(['distrib_brdr'], axis = 1, inplace = True)
+
+
+# In[ ]:
+
+
+
+
+
+# In[52]:
 
 
 doc_id_ukr = df_test[df_test.spec == 1].document_id.values
 subm.query('document_id in @doc_id_ukr')[['views', 'depth', 'full_reads_percent']]
 
 
-# In[42]:
+# In[53]:
 
 
 # присваиваем статичные данные
@@ -693,13 +946,13 @@ subm.loc[subm.query('document_id in @doc_id_ukr').index, 'full_reads_percent'] =
 subm.query('document_id in @doc_id_ukr')[['views', 'depth', 'full_reads_percent']]
 
 
-# In[43]:
+# In[54]:
 
 
 subm.head()
 
 
-# In[44]:
+# In[55]:
 
 
 subm.to_csv(os.path.join(DIR_SUBM, f'{NAME}.csv'), index = False)

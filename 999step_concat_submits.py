@@ -48,11 +48,11 @@ DIR_SUBM_PART = os.path.join(os.getcwd(), 'subm', 'partial')
 # In[4]:
 
 
-NTRY = 24
+NTRY = 25
 #NAME = f'{NTRY}_cb_pca64_sber_lags_parse_bord_nose'
-#NAME_CB  = f'{NTRY}_cb_pca64_sber_lags_parse_bord_nose_cat'
-#NAME_XGB = f'{NTRY}_xgb_pca64_sber_lags_parse_bord_nose_cat'
-#NAME_LGB = f'{NTRY}_lgb_pca64_sber_lags_parse_bord_nose_cat'
+#NAME_CB  = f'{NTRY}_cb_pca64_sber_bord_nose_iter_2mod'
+#NAME_XGB = f'{NTRY}_xgb_pca64_sber_bord_nose_iter_2mod'
+#NAME_LGB = f'{NTRY}_lgb_pca64_sber_bord_nose_iter_2mod'
 #xgb_pca64_sber_lags_parse_bord_nose_val_part
 
 

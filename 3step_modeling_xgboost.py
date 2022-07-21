@@ -73,8 +73,9 @@ np.random.seed(62185)
 
 #sklearn take seed from a line abowe
 
-CB_RANDOMSEED = 309487
+CB_RANDOMSEED  = 309487
 XGB_RANDOMSEED = 56
+LGB_RANDOMSEED = 874256
 
 
 # In[ ]:
@@ -101,8 +102,8 @@ DIR_SUBM_PART = os.path.join(os.getcwd(), 'subm', 'partial')
 # In[8]:
 
 
-NTRY = 24
-NAME = f'{NTRY}_xgb_pca64_sber_bord_nose_iter_poly'
+NTRY = 25
+NAME = f'{NTRY}_xgb_pca64_sber_bord_nose_iter_2mod'
 
 
 # In[9]:
@@ -155,7 +156,7 @@ for el in clmns.keys():
 
 num_cols.extend(['hour', 'mounth', 'dow',
                 'ph_report', 'ph_gallery', 'tv_prog', 'online', 'video', 'infogr',
-                 'holiday', 'day_before_holiday', 'day_after_holiday', 'distrib_brdr',
+                 'holiday', 'day_before_holiday', 'day_after_holiday', #'distrib_brdr',
                  'two_articles',
                  #'spec_event_1',
                 ])
@@ -230,39 +231,67 @@ xgb_params_views = {
     #'num_boost_round': 10000, 
     #'early_stopping_rounds': 100,
 }
-dtrain_v = xgb.DMatrix(df_train[num_cols], label=df_train[['views']])
+#dtrain_v = xgb.DMatrix(df_train[num_cols], label=df_train[['views']])
 #dtrain = xgb.DMatrix(df_train[xgb_spec], label=df_train[['views']])
 
 
 # In[18]:
 
 
-get_ipython().run_cell_magic('time', '', "scores_v = xgb.cv(xgb_params_views, dtrain_v, cv_ntrees, nfold=5, #early_stopping_rounds=1000,\n        metrics={'rmse'},\n        custom_metric = r2,\n       #callbacks=[xgb.callback.EvaluationMonitor(show_stdv=True)]\n      )\n#scores_v.tail(5)")
+def get_model(inp_df, inp_params, target):
+    
+    dtrain = xgb.DMatrix(inp_df[num_cols], label = inp_df[[target]])
+    
+    scores = xgb.cv(inp_params, dtrain, cv_ntrees, nfold=5, #early_stopping_rounds=1000,
+        metrics={'rmse'},
+        custom_metric = r2,
+       #callbacks=[xgb.callback.EvaluationMonitor(show_stdv=True)]
+      )
+    
+    print(scores[scores['test-rmse-mean'] == scores['test-rmse-mean'].min()][:1].to_string())
+    niters = scores['test-rmse-mean'].argmin()
+    
+    model = XGBRegressor(n_estimators=niters, 
+                               #max_depth=7, 
+                               #eta=0.1, 
+                               #subsample=0.7, 
+                               #colsample_bytree=0.8,
+                               n_jobs = -1,
+                               random_state = XGB_RANDOMSEED,
+                              )
+
+    model.fit(inp_df[num_cols], inp_df[target], 
+                    verbose=False
+                   )
+    
+    return model
 
 
+# In[ ]:
+
+
+
+
+
+# In[ ]:
+
+
+
+
+%%time
+scores_v = xgb.cv(xgb_params_views, dtrain_v, cv_ntrees, nfold=5, #early_stopping_rounds=1000,
+        metrics={'rmse'},
+        custom_metric = r2,
+       #callbacks=[xgb.callback.EvaluationMonitor(show_stdv=True)]
+      )
+#scores_v.tail(5)
 # In[19]:
 
 
 #if scores_v['test-rmse-mean'].argmin() != scores_v['test-r2-mean'].argmax():
 #    raise ValueError('wtf?', scores_v['test-rmse-mean'].argmin(), scores_v['test-r2-mean'].argmax())
 
-
-# In[45]:
-
-
-scores_v[scores_v['test-rmse-mean'] == scores_v['test-rmse-mean'].min()][:1]
-
-18	13632.72718	559.933897	43588.009905	12205.524327	0.948294	0.006664	0.450216	0.066209
-# In[21]:
-
-
-views_iter = scores_v['test-rmse-mean'].argmin()
-
-
-# In[22]:
-
-
-xgb_model_views = XGBRegressor(n_estimators=views_iter, 
+scores_v[scores_v['test-rmse-mean'] == scores_v['test-rmse-mean'].min()][:1]18	13632.72718	559.933897	43588.009905	12205.524327	0.948294	0.006664	0.450216	0.066209views_iter = scores_v['test-rmse-mean'].argmin()xgb_model_views = XGBRegressor(n_estimators=views_iter, 
                                #max_depth=7, 
                                #eta=0.1, 
                                #subsample=0.7, 
@@ -274,6 +303,16 @@ xgb_model_views = XGBRegressor(n_estimators=views_iter,
 xgb_model_views.fit(df_train[num_cols], df_train['views'], 
                     verbose=False
                    )
+# In[20]:
+
+
+get_ipython().run_cell_magic('time', '', "model_views_start = get_model(df_train[df_train.distrib_brdr == 1], xgb_params_views, 'views')")
+
+
+# In[21]:
+
+
+plot_importance(model_views_start, 30, 'weight')
 
 
 # In[ ]:
@@ -282,10 +321,16 @@ xgb_model_views.fit(df_train[num_cols], df_train['views'],
 
 
 
+# In[22]:
+
+
+get_ipython().run_cell_magic('time', '', "model_views_end = get_model(df_train[df_train.distrib_brdr == 0], xgb_params_views, 'views')")
+
+
 # In[23]:
 
 
-plot_importance(xgb_model_views, 30, 'weight')
+plot_importance(model_views_end, 30, 'weight')
 
 
 # In[ ]:
@@ -309,39 +354,23 @@ xgb_params_depth = {
  #   'num_boost_round': 10000, 
  #   'early_stopping_rounds': 100,
 }
-dtrain_d = xgb.DMatrix(df_train[num_cols], label=df_train[['depth']])
+#dtrain_d = xgb.DMatrix(df_train[num_cols], label=df_train[['depth']])
 
-
+%%time
+scores_d = xgb.cv(xgb_params_depth, dtrain_d, cv_ntrees, nfold=5, #early_stopping_rounds=1000,
+        metrics={'rmse'},
+        custom_metric = r2,
+       #callbacks=[xgb.callback.EvaluationMonitor(show_stdv=True)]
+      )
+#scores_d.tail()
 # In[25]:
-
-
-get_ipython().run_cell_magic('time', '', "scores_d = xgb.cv(xgb_params_depth, dtrain_d, cv_ntrees, nfold=5, #early_stopping_rounds=1000,\n        metrics={'rmse'},\n        custom_metric = r2,\n       #callbacks=[xgb.callback.EvaluationMonitor(show_stdv=True)]\n      )\n#scores_d.tail()")
-
-
-# In[26]:
 
 
 #if scores_d['test-rmse-mean'].argmin() != scores_d['test-r2-mean'].argmax():
 #    raise ValueError('wtf?', scores_d['test-rmse-mean'].argmin(), scores_d['test-r2-mean'].argmax())
 
-
-# In[27]:
-
-
-scores_d[scores_d['test-rmse-mean'] == scores_d['test-rmse-mean'].min()][:1]
-
-36	0.000655	0.00005	    0.023424	0.000554	0.999856	0.000023	0.81588	    0.011583
-23	0.001309	0.000082	0.023411	0.000574	0.999424	0.000074	0.816096	0.011584
-# In[28]:
-
-
-depth_iter = scores_d['test-rmse-mean'].argmin()
-
-
-# In[29]:
-
-
-xgb_model_depth = XGBRegressor(n_estimators=depth_iter, 
+scores_d[scores_d['test-rmse-mean'] == scores_d['test-rmse-mean'].min()][:1]36	0.000655	0.00005	    0.023424	0.000554	0.999856	0.000023	0.81588	    0.011583
+23	0.001309	0.000082	0.023411	0.000574	0.999424	0.000074	0.816096	0.011584depth_iter = scores_d['test-rmse-mean'].argmin()xgb_model_depth = XGBRegressor(n_estimators=depth_iter, 
                                #max_depth=7, 
                                #eta=0.1, 
                                #subsample=0.7, 
@@ -353,12 +382,34 @@ xgb_model_depth = XGBRegressor(n_estimators=depth_iter,
 xgb_model_depth.fit(df_train[num_cols], df_train['depth'], 
                     verbose=False
                    )
+# In[26]:
 
 
-# In[30]:
+get_ipython().run_cell_magic('time', '', "model_depth_start = get_model(df_train[df_train.distrib_brdr == 1], xgb_params_depth, 'depth')")
 
 
-plot_importance(xgb_model_depth, 30, 'weight')
+# In[27]:
+
+
+plot_importance(model_depth_start, 30, 'weight')
+
+
+# In[ ]:
+
+
+
+
+
+# In[28]:
+
+
+get_ipython().run_cell_magic('time', '', "model_depth_end = get_model(df_train[df_train.distrib_brdr == 0], xgb_params_depth, 'depth')")
+
+
+# In[29]:
+
+
+plot_importance(model_depth_end, 30, 'weight')
 
 
 # In[ ]:
@@ -375,10 +426,10 @@ plot_importance(xgb_model_depth, 30, 'weight')
 
 
 
-# In[31]:
+# In[30]:
 
 
-xgb_params_fpr = {
+xgb_params_frp = {
     'booster': 'gbtree',
     'objective': 'reg:squarederror',
     #'n_estimators': 1000, 
@@ -388,38 +439,22 @@ xgb_params_fpr = {
  #   'num_boost_round': 10000, 
  #   'early_stopping_rounds': 100,
 }
-dtrain_f = xgb.DMatrix(df_train[num_cols], label=df_train[['full_reads_percent']])
+#dtrain_f = xgb.DMatrix(df_train[num_cols], label=df_train[['full_reads_percent']])
 
-
-# In[32]:
-
-
-get_ipython().run_cell_magic('time', '', "scores_f = xgb.cv(xgb_params_fpr, dtrain_f, cv_ntrees, nfold=5, #early_stopping_rounds=1000,\n        metrics={'rmse'},\n        custom_metric = r2,\n       #callbacks=[xgb.callback.EvaluationMonitor(show_stdv=True)]\n      )\n#scores_f.tail()")
-
-
-# In[33]:
+%%time
+scores_f = xgb.cv(xgb_params_fpr, dtrain_f, cv_ntrees, nfold=5, #early_stopping_rounds=1000,
+        metrics={'rmse'},
+        custom_metric = r2,
+       #callbacks=[xgb.callback.EvaluationMonitor(show_stdv=True)]
+      )
+#scores_f.tail()
+# In[31]:
 
 
 #if scores_f['test-rmse-mean'].argmin() != scores_f['test-r2-mean'].argmax():
 #    raise ValueError('wtf?', scores_f['test-rmse-mean'].argmin(), scores_f['test-r2-mean'].argmax())
 
-
-# In[34]:
-
-
-scores_f[scores_f['test-rmse-mean'] == scores_f['test-rmse-mean'].min()][:1]
-
-15	4.712886	0.041195	6.837132	0.046951	0.784065	0.005105	0.544971	0.013879
-# In[35]:
-
-
-frp_iter = scores_f['test-rmse-mean'].argmin()
-
-
-# In[36]:
-
-
-xgb_model_frp = XGBRegressor(n_estimators=frp_iter,
+scores_f[scores_f['test-rmse-mean'] == scores_f['test-rmse-mean'].min()][:1]15	4.712886	0.041195	6.837132	0.046951	0.784065	0.005105	0.544971	0.013879frp_iter = scores_f['test-rmse-mean'].argmin()xgb_model_frp = XGBRegressor(n_estimators=frp_iter,
                              #max_depth=7, 
                              #eta=0.1, 
                              #subsample=0.7, 
@@ -431,12 +466,34 @@ xgb_model_frp = XGBRegressor(n_estimators=frp_iter,
 xgb_model_frp.fit(df_train[num_cols], df_train['full_reads_percent'],
                   verbose=False
                  )
+# In[32]:
 
 
-# In[37]:
+get_ipython().run_cell_magic('time', '', "model_frp_start = get_model(df_train[df_train.distrib_brdr == 1], xgb_params_frp, 'full_reads_percent')")
 
 
-plot_importance(xgb_model_frp, 30, 'weight')
+# In[33]:
+
+
+plot_importance(model_frp_start, 30, 'weight')
+
+
+# In[ ]:
+
+
+
+
+
+# In[34]:
+
+
+get_ipython().run_cell_magic('time', '', "model_frp_end = get_model(df_train[df_train.distrib_brdr == 0], xgb_params_frp, 'full_reads_percent')")
+
+
+# In[35]:
+
+
+plot_importance(model_frp_end, 30, 'weight')
 
 
 # In[ ]:
@@ -478,6 +535,51 @@ x_val_pred.to_csv(os.path.join(DIR_SUBM_PART, f'{NAME}_val_part.csv'), index = F
 
 
 
+# In[43]:
+
+
+pred_train = pd.DataFrame()
+pred_train[['document_id', 'distrib_brdr']] = df_train[['document_id', 'distrib_brdr']]
+pred_train = pred_train.reindex(['document_id', 'distrib_brdr', 'views', 'depth', 'full_reads_percent'], axis = 1)
+
+
+# In[44]:
+
+
+pred_train.loc[pred_train.query('distrib_brdr == 1').index, 'views'] = model_views_start.predict(df_train[df_train.distrib_brdr == 1][num_cols])
+pred_train.loc[pred_train.query('distrib_brdr == 0').index, 'views'] = model_views_end.predict(df_train[df_train.distrib_brdr == 0][num_cols])
+print(sum(pred_train.views.isna()), ' Nan in views')
+
+
+# In[45]:
+
+
+pred_train.loc[pred_train.query('distrib_brdr == 1').index, 'depth'] = model_depth_start.predict(df_train[df_train.distrib_brdr == 1][num_cols])
+pred_train.loc[pred_train.query('distrib_brdr == 0').index, 'depth'] = model_depth_end.predict(df_train[df_train.distrib_brdr == 0][num_cols])
+print(sum(pred_train.depth.isna()), ' Nan in depth')
+
+
+# In[46]:
+
+
+pred_train.loc[pred_train.query('distrib_brdr == 1').index, 'full_reads_percent'] = model_frp_start.predict(df_train[df_train.distrib_brdr == 1][num_cols])
+pred_train.loc[pred_train.query('distrib_brdr == 0').index, 'full_reads_percent'] = model_frp_end.predict(df_train[df_train.distrib_brdr == 0][num_cols])
+print(sum(pred_train.full_reads_percent.isna()), ' Nan in full_reads_percent')
+
+
+# In[47]:
+
+
+pred_train.drop(['distrib_brdr'], axis =1, inplace = True)
+pred_train.to_csv(os.path.join(DIR_SUBM_PART, f'{NAME}_train_part.csv'), index = False)
+
+
+# In[ ]:
+
+
+
+
+
 # In[ ]:
 
 
@@ -486,16 +588,22 @@ x_val_pred.to_csv(os.path.join(DIR_SUBM_PART, f'{NAME}_val_part.csv'), index = F
 
 # ## save models
 
-# In[38]:
+# In[41]:
 
 
-xgb_model_views.save_model(os.path.join(DIR_MODELS, f'{NAME}_v.json'), 
+model_views_start.save_model(os.path.join(DIR_MODELS, f'{NAME}_v_start.json'), 
+                          )
+model_views_end.save_model(os.path.join(DIR_MODELS, f'{NAME}_v_end.json'), 
                           )
 
-xgb_model_depth.save_model(os.path.join(DIR_MODELS, f'{NAME}_d.json'), 
+model_depth_start.save_model(os.path.join(DIR_MODELS, f'{NAME}_d_start.json'), 
+                          )
+model_depth_end.save_model(os.path.join(DIR_MODELS, f'{NAME}_d_end.json'), 
                           )
 
-xgb_model_frp.save_model(os.path.join(DIR_MODELS, f'{NAME}_f.json'), 
+model_frp_start.save_model(os.path.join(DIR_MODELS, f'{NAME}_f_start.json'), 
+                        )
+model_frp_end.save_model(os.path.join(DIR_MODELS, f'{NAME}_f_end.json'), 
                         )
 
 
@@ -506,34 +614,60 @@ xgb_model_frp.save_model(os.path.join(DIR_MODELS, f'{NAME}_f.json'),
 
 
 # ## make predict
-
-# In[39]:
-
-
 pred_views = xgb_model_views.predict(df_test[num_cols])
 pred_depth = xgb_model_depth.predict(df_test[num_cols])
-pred_frp   = xgb_model_frp.predict(  df_test[num_cols])
-
-
-# In[40]:
-
-
-subm = pd.DataFrame()
+pred_frp   = xgb_model_frp.predict(  df_test[num_cols])subm = pd.DataFrame()
 subm['document_id'] = df_test.document_id
 
 subm['views'] = pred_views
 subm['depth'] = pred_depth
 subm['full_reads_percent'] = pred_frp
+# In[48]:
 
 
-# In[41]:
+subm = pd.DataFrame()
+subm[['document_id', 'distrib_brdr']] = df_test[['document_id', 'distrib_brdr']]
+subm = subm.reindex(['document_id', 'distrib_brdr', 'views', 'depth', 'full_reads_percent'], axis = 1)
+
+
+# In[52]:
+
+
+subm.loc[subm.query('distrib_brdr == 1').index, 'views'] = model_views_start.predict(df_test[df_test.distrib_brdr == 1][num_cols])
+subm.loc[subm.query('distrib_brdr == 0').index, 'views'] = model_views_end.predict(df_test[df_test.distrib_brdr == 0][num_cols])
+print(sum(subm.views.isna()), ' Nan in views')
+
+
+# In[53]:
+
+
+subm.loc[subm.query('distrib_brdr == 1').index, 'depth'] = model_depth_start.predict(df_test[df_test.distrib_brdr == 1][num_cols])
+subm.loc[subm.query('distrib_brdr == 0').index, 'depth'] = model_depth_end.predict(df_test[df_test.distrib_brdr == 0][num_cols])
+print(sum(subm.depth.isna()), ' Nan in depth')
+
+
+# In[54]:
+
+
+subm.loc[subm.query('distrib_brdr == 1').index, 'full_reads_percent'] = model_frp_start.predict(df_test[df_test.distrib_brdr == 1][num_cols])
+subm.loc[subm.query('distrib_brdr == 0').index, 'full_reads_percent'] = model_frp_end.predict(df_test[df_test.distrib_brdr == 0][num_cols])
+print(sum(subm.full_reads_percent.isna()), ' Nan in full_reads_percent')
+
+
+# In[ ]:
+
+
+
+
+
+# In[55]:
 
 
 doc_id_ukr = df_test[df_test.spec == 1].document_id.values
 subm.query('document_id in @doc_id_ukr')[['views', 'depth', 'full_reads_percent']]
 
 
-# In[42]:
+# In[56]:
 
 
 # присваиваем статичные данные
@@ -544,13 +678,13 @@ subm.loc[subm.query('document_id in @doc_id_ukr').index, 'full_reads_percent'] =
 subm.query('document_id in @doc_id_ukr')[['views', 'depth', 'full_reads_percent']]
 
 
-# In[43]:
+# In[57]:
 
 
 subm.head()
 
 
-# In[44]:
+# In[58]:
 
 
 subm.to_csv(os.path.join(DIR_SUBM, f'{NAME}.csv'), index = False)

@@ -4,6 +4,18 @@
 # In[1]:
 
 
+get_ipython().run_line_magic('load_ext', 'watermark')
+
+
+# In[2]:
+
+
+get_ipython().run_line_magic('watermark', '')
+
+
+# In[3]:
+
+
 import os
 import pickle as pkl
 
@@ -21,9 +33,15 @@ from tqdm import tqdm
 tqdm.pandas()
 
 
+# In[4]:
+
+
+get_ipython().run_line_magic('watermark', '--iversions')
+
+
 # ## Reproducibility block
 
-# In[2]:
+# In[5]:
 
 
 # seed the RNG for all devices (both CPU and CUDA)
@@ -49,13 +67,13 @@ np.random.seed(62185)
 
 
 
-# In[3]:
+# In[6]:
 
 
 DIR_DATA  = os.path.join(os.getcwd(), 'data')
 
 
-# In[4]:
+# In[7]:
 
 
 # ctr для специальных статей по украине
@@ -91,7 +109,7 @@ ce.WOEEncoder(),
 
 
 
-# In[5]:
+# In[8]:
 
 
 df_train = pd.read_csv(os.path.join(DIR_DATA, 'train_extended.csv'))#, index_col= 0)
@@ -101,7 +119,7 @@ df_train['publish_date'] = pd.to_datetime(df_train['publish_date'])
 df_test['publish_date']  = pd.to_datetime(df_test['publish_date'])
 
 
-# In[6]:
+# In[9]:
 
 
 df_train.shape, df_test.shape
@@ -122,7 +140,7 @@ df_train.shape, df_test.shape
 # признаки, которые могу быть как числовыми так и категориальными: [ ]   
 # }}
 
-# In[7]:
+# In[10]:
 
 
 clmns = {'document_id':{'num':  ['nimgs','text_len', ],   
@@ -160,7 +178,7 @@ clmns = {'document_id':{'num':  ['nimgs','text_len', ],
         }
 
 
-# In[8]:
+# In[11]:
 
 
 print(df_train.columns.values)
@@ -178,7 +196,7 @@ print(df_train.columns.values)
 # 
 # уберем статьи раньше минимальной даты в тесте. для начала так, дальше можно будет поиграться.
 
-# In[9]:
+# In[12]:
 
 
 def clear_data(inp_df: pd.DataFrame, min_time: pd.Timestamp) -> pd.DataFrame:
@@ -224,7 +242,7 @@ def clear_data(inp_df: pd.DataFrame, min_time: pd.Timestamp) -> pd.DataFrame:
     return inp_df
 
 
-# In[10]:
+# In[13]:
 
 
 #min_test_time = df_test['publish_date'].min()
@@ -249,7 +267,7 @@ df_train = clear_data(df_train, min_test_time)
 
 # ## title
 
-# In[11]:
+# In[14]:
 
 
 def add_title_features(inp_df):
@@ -269,20 +287,20 @@ def add_title_features(inp_df):
     return inp_df
 
 
-# In[12]:
+# In[15]:
 
 
 df_train = add_title_features(df_train)
 df_test = add_title_features(df_test)
 
 
-# In[13]:
+# In[16]:
 
 
 df_train.ph_report.sum(), df_train.ph_gallery.sum(), df_train.tv_prog.sum(), df_train.online.sum(), df_train.video.sum(), df_train.infogr.sum()
 
 
-# In[14]:
+# In[17]:
 
 
 df_test.ph_report.sum(), df_test.ph_gallery.sum(), df_test.tv_prog.sum(), df_test.online.sum(), df_test.video.sum(), df_test.infogr.sum()
@@ -296,7 +314,7 @@ df_test.ph_report.sum(), df_test.ph_gallery.sum(), df_test.tv_prog.sum(), df_tes
 
 # # publish date
 
-# In[15]:
+# In[18]:
 
 
 holidays = {pd.Timestamp('2022-01-01').date(), pd.Timestamp('2022-01-02').date(), pd.Timestamp('2022-01-03').date(),
@@ -323,13 +341,13 @@ day_after_holiday = {pd.Timestamp('2022-01-10').date(), pd.Timestamp('2022-02-24
                     }
 
 
-# In[16]:
+# In[19]:
 
 
 border = pd.Timestamp('2022-04-08').date()
 
 
-# In[17]:
+# In[20]:
 
 
 def publish_date_features(inp_df: pd.DataFrame) -> pd.DataFrame:
@@ -363,7 +381,7 @@ def publish_date_features(inp_df: pd.DataFrame) -> pd.DataFrame:
     return inp_df
 
 
-# In[18]:
+# In[21]:
 
 
 print('before ', df_train.shape, df_test.shape)
@@ -372,7 +390,7 @@ df_test  = publish_date_features(df_test)
 print('after  ', df_train.shape, df_test.shape)
 
 
-# In[19]:
+# In[22]:
 
 
 print(sum(df_train.holiday), sum(df_train.day_before_holiday), sum(df_train.day_after_holiday), )
@@ -387,13 +405,13 @@ print(sum(df_test.holiday), sum(df_test.day_before_holiday), sum(df_test.day_aft
 
 # Рассчитаем дневные статистики + лаги за 7 дней
 
-# In[20]:
+# In[23]:
 
 
 df_train.sort_values(by='m_d').m_d.diff().value_counts()
 
 
-# In[21]:
+# In[24]:
 
 
 def create_daily_stats(inp_df: pd.DataFrame, max_lags: int = 7) -> pd.DataFrame:
@@ -418,7 +436,7 @@ def create_daily_stats(inp_df: pd.DataFrame, max_lags: int = 7) -> pd.DataFrame:
     return ret_df
 
 
-# In[22]:
+# In[25]:
 
 
 daily_stats = create_daily_stats(df_train)
@@ -433,7 +451,7 @@ daily_stats.to_csv(os.path.join(DIR_DATA, 'dayly_stats.csv'), index = False)
 
 # Добавим их к датасетам
 
-# In[23]:
+# In[26]:
 
 
 def add_daily_stats(inp_df:pd.DataFrame) -> pd.DataFrame:
@@ -447,7 +465,7 @@ def add_daily_stats(inp_df:pd.DataFrame) -> pd.DataFrame:
     return ret_df
 
 
-# In[24]:
+# In[27]:
 
 
 print('before ', df_train.shape, df_test.shape, 'add ', daily_stats.shape)
@@ -458,7 +476,7 @@ print('after  ', df_train.shape, df_test.shape)
 
 # Проверим на пропуски в тесте
 
-# In[25]:
+# In[28]:
 
 
 df_test[['views_min', 'views_max', 'views_mean', 'views_std',
@@ -499,7 +517,7 @@ df_test[['views_min', 'views_max', 'views_mean', 'views_std',
 
 # Авторы считываются как строки, а не как массив строк. исправим.
 
-# In[26]:
+# In[29]:
 
 
 def prep_authors(inp_df): 
@@ -530,7 +548,7 @@ df_test['authors']   = df_test.authors.apply( lambda x: literal_eval(x))
 df_train['authors'] = df_train['authors'].apply(lambda x: x if len(x) > 0 else ['without_author'])
 df_test['authors']  = df_test['authors'].apply( lambda x: x if len(x) > 0 else ['without_author'])df_train['Nauthors'] = df_train.authors.apply(lambda x: len(x))
 df_test['Nauthors']  = df_test.authors.apply(lambda x: len(x))clmns['authors']['num'].extend(['Nauthors'])
-# In[27]:
+# In[30]:
 
 
 print('before ', df_train.shape, df_test.shape)
@@ -547,7 +565,7 @@ print('after  ', df_train.shape, df_test.shape)
 
 # выделяем всех авторов в трейне
 
-# In[28]:
+# In[31]:
 
 
 all_authors = set()
@@ -564,7 +582,7 @@ for el in df_train.authors.values:
 
 # проверяем на наличия авторов из теста
 
-# In[29]:
+# In[32]:
 
 
 test_authors = set()
@@ -594,7 +612,7 @@ for el in test_authors:
 
 # Все статьи автора (с учетом совместных)
 
-# In[30]:
+# In[33]:
 
 
 auth_doc_id = {el: [] for el in all_authors}
@@ -609,7 +627,7 @@ with open(os.path.join(DIR_DATA, 'authors_all.pkl'), 'wb') as pkl_file:
 
 # Статьи только автора (в одиночку)(пока не применяется)
 
-# In[31]:
+# In[34]:
 
 
 auth_doc_id_alone = {el: [] for el in all_authors}
@@ -630,7 +648,7 @@ with open(os.path.join(DIR_DATA, 'authors_alone.pkl'), 'wb') as pkl_file:
 
 # Соберем статистику по авторам (с учетом совместных)
 
-# In[32]:
+# In[35]:
 
 
 author_columns = ['author', 'author_size', 'v_auth_min', 'v_auth_max', 'v_auth_mean', 'v_auth_std', 'd_auth_min',
@@ -646,7 +664,7 @@ author_group_columns = ['author_size',
                    ]
 
 
-# In[33]:
+# In[36]:
 
 
 df_author = pd.DataFrame(columns = author_columns)
@@ -679,13 +697,13 @@ df_author.loc['mean', ['author']] = '5a2511349a794727e3fa3d20'
 df_author.loc['mean2', ['author']] = '57f766ae9a79479bfcfa0133'
 
 
-# In[34]:
+# In[37]:
 
 
 df_author.to_csv(os.path.join(DIR_DATA, 'author_together.csv'), index = False)
 
 
-# In[35]:
+# In[38]:
 
 
 #df_author.tail()
@@ -699,7 +717,7 @@ df_author.to_csv(os.path.join(DIR_DATA, 'author_together.csv'), index = False)
 
 # Добавляем статистики по авторам в датасеты
 
-# In[36]:
+# In[39]:
 
 
 def add_author_statistics(inp_df):
@@ -764,7 +782,7 @@ def add_author_statistics(inp_df):
     return ret_np
 
 
-# In[37]:
+# In[40]:
 
 
 # кроме полей author / author_size
@@ -778,7 +796,7 @@ author_stats_test  = df_test[ ['authors']].progress_apply(add_author_statistics,
 print('after', df_train.shape, df_test.shape)
 
 
-# In[38]:
+# In[41]:
 
 
 #clmns['authors']['num'].extend(author_columns[2:])
@@ -804,7 +822,7 @@ print('after', df_train.shape, df_test.shape)
 
 # ## ctr
 
-# In[39]:
+# In[42]:
 
 
 def add_ctr_features(inp_df):
@@ -817,7 +835,7 @@ def add_ctr_features(inp_df):
     return inp_df
 
 
-# In[40]:
+# In[43]:
 
 
 #print('before ', df_train.shape, df_test.shape)
@@ -826,7 +844,7 @@ def add_ctr_features(inp_df):
 #print('after  ', df_train.shape, df_test.shape)
 
 
-# In[41]:
+# In[44]:
 
 
 df_test['spec'] = df_test.ctr.apply(lambda x: 1 if x == CTR_UKR else 0)
@@ -844,7 +862,7 @@ df_test['spec'] = df_test.ctr.apply(lambda x: 1 if x == CTR_UKR else 0)
 
 
 
-# In[42]:
+# In[45]:
 
 
 if 'ctr' not in clmns['ctr']['num']:
@@ -861,7 +879,7 @@ if 'ctr' not in clmns['ctr']['num']:
 
 # Собираем статистики по категориям
 
-# In[43]:
+# In[46]:
 
 
 def create_daily_stats_by_category(inp_df: pd.DataFrame, max_lags: int = 7) -> pd.DataFrame:
@@ -890,7 +908,7 @@ def create_daily_stats_by_category(inp_df: pd.DataFrame, max_lags: int = 7) -> p
     return ret_df
 
 
-# In[44]:
+# In[47]:
 
 
 daily_stats_category = create_daily_stats_by_category(df_train)
@@ -905,7 +923,7 @@ daily_stats_category.to_csv(os.path.join(DIR_DATA, 'daily_stats_category.csv'), 
 
 # Добавляем статистики по категориям в датасеты
 
-# In[45]:
+# In[48]:
 
 
 def add_daily_stats_category(inp_df:pd.DataFrame) -> pd.DataFrame:
@@ -918,7 +936,7 @@ def add_daily_stats_category(inp_df:pd.DataFrame) -> pd.DataFrame:
     return ret_df
 
 
-# In[46]:
+# In[49]:
 
 
 print('before ', df_train.shape, df_test.shape, 'add ', daily_stats_category.shape)
@@ -927,7 +945,7 @@ df_test = add_daily_stats_category(df_test)
 print('after  ', df_train.shape, df_test.shape, )
 
 
-# In[47]:
+# In[50]:
 
 
 #clmns['category']['num'].extend(daily_stats_category.columns[2:])
@@ -935,7 +953,7 @@ print('after  ', df_train.shape, df_test.shape, )
 
 # Проверяем, что все данные есть в тесте
 
-# In[48]:
+# In[51]:
 
 
 #df_test[['cat_views_min', 'cat_views_max', 'cat_views_mean', 'cat_views_std',
@@ -952,7 +970,7 @@ df_test[daily_stats_category.columns[2:]].isnull().sum()
 
 
 
-# In[49]:
+# In[52]:
 
 
 def prep_category(inp_df):
@@ -971,7 +989,7 @@ def prep_category(inp_df):
     return inp_df
 
 
-# In[50]:
+# In[53]:
 
 
 print('before ', df_train.shape, df_test.shape, 'add ', daily_stats_category.shape)
@@ -988,7 +1006,7 @@ print('after  ', df_train.shape, df_test.shape, )
 
 # ## tags
 
-# In[51]:
+# In[54]:
 
 
 df_train['tags']  = df_train.tags.apply(lambda x: literal_eval(x))
@@ -1038,7 +1056,7 @@ num_cols = [el for el in num_cols if el not in ['document_id', 'title', 'publish
 for el in cat_cols:
     if el not in df_train.columns or el not in df_test.columns:
         print(el)
-# In[52]:
+# In[55]:
 
 
 cat_cols = []
@@ -1051,7 +1069,7 @@ for el in clmns.keys():
         print(clmns[el]['both'])
 
 
-# In[53]:
+# In[56]:
 
 
 num_cols.extend(['hour', 'mounth', 'dow', ])
@@ -1075,25 +1093,25 @@ cat_cols.extend([ 'ph_report', 'ph_gallery', 'tv_prog', 'online', 'video', 'info
 
 # # Полипризнаки
 
-# In[54]:
+# In[57]:
 
 
 poly_cols = ['Nauthors', 'ctr', 'text_len', 'hour', 'day', 'mounth', 'dow', 'nimgs', 'category_int']
 len(poly_cols)
 
 
-# In[55]:
+# In[58]:
 
 
-poly2 = preprocessing.PolynomialFeatures(degree = 2, include_bias = False)
-poly2.fit(df_train[poly_cols])
+#poly2 = preprocessing.PolynomialFeatures(degree = 2, include_bias = False)
+#oly2.fit(df_train[poly_cols])
 
 
-# In[56]:
+# In[59]:
 
 
-poly3 = preprocessing.PolynomialFeatures(degree = 3, include_bias = False)
-poly3.fit(df_train[poly_cols])
+#poly3 = preprocessing.PolynomialFeatures(degree = 3, include_bias = False)
+#poly3.fit(df_train[poly_cols])
 
 
 # In[ ]:
@@ -1102,7 +1120,7 @@ poly3.fit(df_train[poly_cols])
 
 
 
-# In[59]:
+# In[60]:
 
 
 def addd_poly(inp_df, inp_poly):
@@ -1126,25 +1144,13 @@ def addd_poly(inp_df, inp_poly):
     return inp_df
 
 
-# In[60]:
-
-
-print('before ', df_train.shape, df_test.shape)
-df_train = addd_poly(df_train, poly2) #poly3
-df_test  = addd_poly(df_test,  poly2) #poly3
-print('after  ', df_train.shape, df_test.shape)
-
-
-# In[ ]:
-
-
-
-
-
 # In[61]:
 
 
-num_cols.extend(clmns['poly']['num'])
+#print('before ', df_train.shape, df_test.shape)
+#df_train = addd_poly(df_train, poly2) #poly3
+#df_test  = addd_poly(df_test,  poly2) #poly3
+#print('after  ', df_train.shape, df_test.shape)
 
 
 # In[ ]:
@@ -1154,6 +1160,18 @@ num_cols.extend(clmns['poly']['num'])
 
 
 # In[62]:
+
+
+#num_cols.extend(clmns['poly']['num'])
+
+
+# In[ ]:
+
+
+
+
+
+# In[63]:
 
 
 df_train.to_csv(os.path.join( DIR_DATA, 'train_upd_no_norm.csv'), index = False)
@@ -1168,7 +1186,7 @@ df_test.to_csv(os.path.join( DIR_DATA,  'test_upd_no_norm.csv'), index = False)
 
 # нормализуем
 
-# In[63]:
+# In[64]:
 
 
 #scaler = preprocessing.MinMaxScaler()   #Transform features by scaling each feature to a given range.
@@ -1187,7 +1205,7 @@ df_test[num_cols]  = scaler.transform(df_test[num_cols])
 
 
 
-# In[64]:
+# In[65]:
 
 
 # определяем CTR_UKR спецстатей по украине после нормализации
@@ -1203,7 +1221,7 @@ df_test[num_cols]  = scaler.transform(df_test[num_cols])
 
 # Добавляем эмбединги
 
-# In[65]:
+# In[66]:
 
 
 # sberbank-ai/sbert_large_mt_nlu_ru       1024  1.71Gb
@@ -1221,7 +1239,7 @@ def add_ttle_embeding(inp_df: pd.DataFrame) -> pd.DataFrame:
     
     pass    
     
-# In[66]:
+# In[67]:
 
 
 emb_train = pd.read_csv(os.path.join(DIR_DATA, f'ttl_cln_emb_train_{MODEL_FOLDER}_{MAX_LENGTH}_pca{PCA_COMPONENTS}.csv'))
@@ -1232,7 +1250,7 @@ df_train = df_train.merge(emb_train, on = 'document_id', validate = 'one_to_one'
 df_train.shape, emb_train.shape
 
 
-# In[67]:
+# In[68]:
 
 
 emb_test = pd.read_csv(os.path.join(DIR_DATA, f'ttl_cln_emb_test_{MODEL_FOLDER}_{MAX_LENGTH}_pca{PCA_COMPONENTS}.csv'))
@@ -1243,20 +1261,20 @@ df_test = df_test.merge(emb_test, on = 'document_id', validate = 'one_to_one')
 df_test.shape, emb_test.shape
 
 
-# In[68]:
+# In[69]:
 
 
 num_cols = num_cols + list(emb_train.columns)
 
 
-# In[69]:
+# In[70]:
 
 
 if 'document_id' in num_cols:
     num_cols.remove('document_id')
 
 
-# In[70]:
+# In[71]:
 
 
 clmns['title']['num'].extend(emb_train.columns[1:])
@@ -1276,20 +1294,20 @@ clmns['title']['num'].extend(emb_train.columns[1:])
 
 # ## save
 
-# In[71]:
+# In[72]:
 
 
 df_test.shape, df_test.shape
 
 
-# In[ ]:
+# In[73]:
 
 
 df_train.to_csv(os.path.join( DIR_DATA, 'train_upd.csv'))
 df_test.to_csv(os.path.join( DIR_DATA,  'test_upd.csv'))
 
 
-# In[ ]:
+# In[74]:
 
 
 with open(os.path.join(DIR_DATA, 'clmns.pkl'), 'wb') as pickle_file:
