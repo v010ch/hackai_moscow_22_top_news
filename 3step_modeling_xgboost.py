@@ -308,7 +308,7 @@ xgb_model_views.fit(df_train[num_cols], df_train['views'],
 
 get_ipython().run_cell_magic('time', '', "model_views_start = get_model(df_train[df_train.distrib_brdr == 1], xgb_params_views, 'views')")
 
-
+11     22384.024923      903.611058    61200.728146     19997.9598       0.928265      0.004713       0.45129     0.093598
 # In[21]:
 
 
@@ -326,7 +326,7 @@ plot_importance(model_views_start, 30, 'weight')
 
 get_ipython().run_cell_magic('time', '', "model_views_end = get_model(df_train[df_train.distrib_brdr == 0], xgb_params_views, 'views')")
 
-
+24      2819.551404      172.393659     9400.983694     715.835259       0.963838      0.004991      0.596266     0.012526
 # In[23]:
 
 
@@ -387,7 +387,7 @@ xgb_model_depth.fit(df_train[num_cols], df_train['depth'],
 
 get_ipython().run_cell_magic('time', '', "model_depth_start = get_model(df_train[df_train.distrib_brdr == 1], xgb_params_depth, 'depth')")
 
-
+18         0.019287        0.000396        0.035885       0.003551       0.863268      0.011823      0.501045      0.09238
 # In[27]:
 
 
@@ -405,7 +405,7 @@ plot_importance(model_depth_start, 30, 'weight')
 
 get_ipython().run_cell_magic('time', '', "model_depth_end = get_model(df_train[df_train.distrib_brdr == 0], xgb_params_depth, 'depth')")
 
-
+21         0.009228        0.000468        0.015788       0.002203       0.817579      0.009464      0.460251     0.049625
 # In[29]:
 
 
@@ -471,7 +471,7 @@ xgb_model_frp.fit(df_train[num_cols], df_train['full_reads_percent'],
 
 get_ipython().run_cell_magic('time', '', "model_frp_start = get_model(df_train[df_train.distrib_brdr == 1], xgb_params_frp, 'full_reads_percent')")
 
-
+13         4.108283          0.1468        7.304048       0.081449       0.847669      0.011282      0.518463     0.020976
 # In[33]:
 
 
@@ -489,7 +489,7 @@ plot_importance(model_frp_start, 30, 'weight')
 
 get_ipython().run_cell_magic('time', '', "model_frp_end = get_model(df_train[df_train.distrib_brdr == 0], xgb_params_frp, 'full_reads_percent')")
 
-
+13          3.88763        0.069976        6.835213       0.144784       0.838307      0.007139       0.49987     0.014559
 # In[35]:
 
 
@@ -678,15 +678,16 @@ subm.loc[subm.query('document_id in @doc_id_ukr').index, 'full_reads_percent'] =
 subm.query('document_id in @doc_id_ukr')[['views', 'depth', 'full_reads_percent']]
 
 
-# In[57]:
+# In[60]:
 
 
 subm.head()
 
 
-# In[58]:
+# In[59]:
 
 
+subm.drop(['distrib_brdr'], inplace = True, axis = 1)
 subm.to_csv(os.path.join(DIR_SUBM, f'{NAME}.csv'), index = False)
 
 

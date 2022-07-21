@@ -372,7 +372,7 @@ cb_model_views.fit(train_views_full,
 
 get_ipython().run_cell_magic('time', '', 'model_views_start = get_model(train_views_start, cb_params_views)')
 
-
+2410        2410      0.514488     0.085848       0.996769      0.000571    57288.439777   21396.965895      4719.273203      150.040884
 # In[22]:
 
 
@@ -386,13 +386,13 @@ plot_feature_importance(model_views_start.get_feature_importance(), train_views_
 
 
 
-# In[23]:
+# In[ ]:
 
 
 get_ipython().run_cell_magic('time', '', 'model_views_end = get_model(train_views_end, cb_params_views)')
 
 
-# In[24]:
+# In[ ]:
 
 
 plot_feature_importance(model_views_end.get_feature_importance(), train_views_end.get_feature_names(), 'CATBOOST')
@@ -412,7 +412,7 @@ plot_feature_importance(model_views_end.get_feature_importance(), train_views_en
 
 # ## depth
 
-# In[25]:
+# In[ ]:
 
 
 cb_params_depth = cb_params_views
@@ -437,13 +437,13 @@ cb_model_depth.fit(train_depth_full,
                    #plot = True,
                    verbose = 100,
                   )
-# In[26]:
+# In[ ]:
 
 
 get_ipython().run_cell_magic('time', '', 'model_depth_start = get_model(train_depth_start, cb_params_depth)')
 
 
-# In[27]:
+# In[ ]:
 
 
 #plot_feature_importance(cb_model_views, train_ds_views, 30)
@@ -456,13 +456,13 @@ plot_feature_importance(model_depth_start.get_feature_importance(), train_depth_
 
 
 
-# In[28]:
+# In[ ]:
 
 
 get_ipython().run_cell_magic('time', '', 'model_depth_end = get_model(train_depth_end, cb_params_depth)')
 
 
-# In[29]:
+# In[ ]:
 
 
 plot_feature_importance(model_depth_end.get_feature_importance(), train_depth_end.get_feature_names(), 'CATBOOST')
@@ -488,7 +488,7 @@ plot_feature_importance(model_depth_end.get_feature_importance(), train_depth_en
 
 # ## full_reads_percent
 
-# In[30]:
+# In[ ]:
 
 
 cb_params_frp = cb_params_views
@@ -515,13 +515,13 @@ cb_model_frp.fit(train_frp_full,#train_ds_frp,
                    #plot = True,
                  verbose = 100,
                   )
-# In[31]:
+# In[ ]:
 
 
 get_ipython().run_cell_magic('time', '', 'model_frp_start = get_model(train_frp_start, cb_params_frp)')
 
 
-# In[32]:
+# In[ ]:
 
 
 #plot_feature_importance(cb_model_views, train_ds_views, 30)
@@ -540,13 +540,13 @@ plot_feature_importance(model_frp_start.get_feature_importance(), train_frp_star
 
 
 
-# In[33]:
+# In[ ]:
 
 
 get_ipython().run_cell_magic('time', '', 'model_frp_end = get_model(train_frp_end, cb_params_frp)')
 
 
-# In[34]:
+# In[ ]:
 
 
 #plot_feature_importance(cb_model_views, train_ds_views, 30)
@@ -604,7 +604,7 @@ x_val_pred.to_csv(os.path.join(DIR_SUBM_PART, f'{NAME}_val_part.csv'), index = F
 
 
 
-# In[86]:
+# In[ ]:
 
 
 pred_train = pd.DataFrame()
@@ -612,7 +612,7 @@ pred_train[['document_id', 'distrib_brdr']] = df_train[['document_id', 'distrib_
 pred_train = pred_train.reindex(['document_id', 'distrib_brdr', 'views', 'depth', 'full_reads_percent'], axis = 1)
 
 
-# In[87]:
+# In[ ]:
 
 
 pred_train.loc[pred_train.query('distrib_brdr == 1').index, 'views'] = model_views_start.predict(df_train[df_train.distrib_brdr == 1][cat_cols + num_cols])
@@ -620,7 +620,7 @@ pred_train.loc[pred_train.query('distrib_brdr == 0').index, 'views'] = model_vie
 sum(pred_train.views.isna())
 
 
-# In[88]:
+# In[ ]:
 
 
 pred_train.loc[pred_train.query('distrib_brdr == 1').index, 'depth'] = model_depth_start.predict(df_train[df_train.distrib_brdr == 1][cat_cols + num_cols])
@@ -628,7 +628,7 @@ pred_train.loc[pred_train.query('distrib_brdr == 0').index, 'depth'] = model_dep
 sum(pred_train.depth.isna())
 
 
-# In[89]:
+# In[ ]:
 
 
 pred_train.loc[pred_train.query('distrib_brdr == 1').index, 'full_reads_percent'] = model_frp_start.predict(df_train[df_train.distrib_brdr == 1][cat_cols + num_cols])
@@ -636,7 +636,7 @@ pred_train.loc[pred_train.query('distrib_brdr == 0').index, 'full_reads_percent'
 sum(pred_train.full_reads_percent.isna())
 
 
-# In[90]:
+# In[ ]:
 
 
 pred_train.drop(['distrib_brdr'], axis =1, inplace = True)
@@ -657,7 +657,7 @@ pred_train.to_csv(os.path.join(DIR_SUBM_PART, f'{NAME}_train_part.csv'), index =
 
 
 
-# In[35]:
+# In[ ]:
 
 
 #cb_model_views.save_model(os.path.join(DIR_MODELS, f'{NTRY}_pca64_cb_views.cbm'), 
@@ -731,7 +731,7 @@ model_frp_end.save_model(os.path.join(DIR_MODELS, f'{NAME}_f_end.cbm'),
 
 # ## make predict
 
-# In[66]:
+# In[ ]:
 
 
 subm = pd.DataFrame()
@@ -745,7 +745,7 @@ subm = subm.reindex(['document_id', 'distrib_brdr', 'views', 'depth', 'full_read
 
 
 
-# In[67]:
+# In[ ]:
 
 
 subm.loc[subm.query('distrib_brdr == 1').index, 'views'] = model_views_start.predict(df_test[df_test.distrib_brdr == 1][cat_cols + num_cols])
@@ -753,7 +753,7 @@ subm.loc[subm.query('distrib_brdr == 0').index, 'views'] = model_views_end.predi
 sum(subm.views.isna())
 
 
-# In[68]:
+# In[ ]:
 
 
 subm.loc[subm.query('distrib_brdr == 1').index, 'depth'] = model_depth_start.predict(df_test[df_test.distrib_brdr == 1][cat_cols + num_cols])
@@ -761,7 +761,7 @@ subm.loc[subm.query('distrib_brdr == 0').index, 'depth'] = model_depth_end.predi
 sum(subm.depth.isna())
 
 
-# In[69]:
+# In[ ]:
 
 
 subm.loc[subm.query('distrib_brdr == 1').index, 'full_reads_percent'] = model_frp_start.predict(df_test[df_test.distrib_brdr == 1][cat_cols + num_cols])
@@ -769,7 +769,7 @@ subm.loc[subm.query('distrib_brdr == 0').index, 'full_reads_percent'] = model_fr
 sum(subm.full_reads_percent.isna())
 
 
-# In[70]:
+# In[ ]:
 
 
 subm.drop(['distrib_brdr'], axis = 1, inplace = True)
@@ -788,14 +788,14 @@ subm['document_id'] = df_test.document_id
 subm['views'] = pred_views
 subm['depth'] = pred_depth
 subm['full_reads_percent'] = pred_frp
-# In[71]:
+# In[ ]:
 
 
 doc_id_ukr = df_test[df_test.spec == 1].document_id.values
 subm.query('document_id in @doc_id_ukr')[['views', 'depth', 'full_reads_percent']]
 
 
-# In[72]:
+# In[ ]:
 
 
 # присваиваем статичные данные
@@ -812,13 +812,13 @@ subm.query('document_id in @doc_id_ukr')[['views', 'depth', 'full_reads_percent'
 
 
 
-# In[73]:
+# In[ ]:
 
 
 subm.head()
 
 
-# In[74]:
+# In[ ]:
 
 
 subm.to_csv(os.path.join(DIR_SUBM, f'{NAME}.csv'), index = False)

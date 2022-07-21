@@ -491,7 +491,8 @@ print(views_iter)lgb_model_views = lgb.train(params,
 
 get_ipython().run_cell_magic('time', '', 'lgb_model_views_start = get_model(train_views_start, params)')
 
-
+226 17349.160056309396 5517.927217157143
+226 57506.143468314796 19351.41192630733
 # In[26]:
 
 
@@ -518,7 +519,8 @@ lgb.plot_importance(lgb_model_views_start, max_num_features = 30, figsize = (30,
 
 get_ipython().run_cell_magic('time', '', 'lgb_model_views_end = get_model(train_views_end, params)')
 
-
+77 3761.9464700862563 110.23969646181965
+77 9034.796767591883 653.1865103504509
 # In[28]:
 
 
@@ -611,7 +613,8 @@ lgb_model_depth = lgb.train(params,
 
 get_ipython().run_cell_magic('time', '', 'lgb_model_depth_start = get_model(train_depth_start, params)')
 
-
+92 0.012774675718467876 0.00043797150418636567
+92 0.03574606040187936 0.0030533996509353564
 # In[32]:
 
 
@@ -636,7 +639,8 @@ lgb.plot_importance(lgb_model_depth_start, max_num_features = 30, figsize = (30,
 
 get_ipython().run_cell_magic('time', '', 'lgb_model_depth_end = get_model(train_depth_end, params)')
 
-
+48 0.010399829750017912 0.0008243396934630533
+48 0.015475994859493908 0.002194558006310076
 # In[34]:
 
 
@@ -713,7 +717,8 @@ lgb_model_frp = lgb.train(params,
 
 get_ipython().run_cell_magic('time', '', 'lgb_model_frp_start = get_model(train_frp_start, params)')
 
-
+54 3.5817026929454285 0.015001174048343903
+54 7.035757899813923 0.08849771756751056
 # In[38]:
 
 
@@ -738,7 +743,8 @@ lgb.plot_importance(lgb_model_frp_start, max_num_features = 30, figsize = (30, 1
 
 get_ipython().run_cell_magic('time', '', 'lgb_model_frp_end = get_model(train_frp_end, params)')
 
-
+71 3.1057100118726253 0.014663128279285759
+71 6.440356846362912 0.14059759791727314
 # In[40]:
 
 

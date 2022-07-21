@@ -1198,7 +1198,17 @@ scaler.fit(df_train[num_cols])
 df_train[num_cols] = scaler.transform(df_train[num_cols])
 df_test[num_cols]  = scaler.transform(df_test[num_cols])
 
+scaler_start = preprocessing.StandardScaler()  #Standardize features by removing the mean and scaling to unit variance.
+scaler_end = preprocessing.StandardScaler()  #Standardize features by removing the mean and scaling to unit variance.
 
+scaler_start.fit(df_train[df_train.distrib_brdr == 1][num_cols])
+scaler_end.fit(df_train[df_train.distrib_brdr == 0][num_cols])
+
+train.loc[df_train.query('distrib_brdr == 1').index, num_cols] = scaler_start.transform(df_train[df_train.distrib_brdr == 1][num_cols])
+test.loc[df_test.query('distrib_brdr == 1').index, num_cols]  = scaler_start.transform(df_test[df_test.distrib_brdr == 1][num_cols])
+
+train.loc[df_train.query('distrib_brdr == 0').index, num_cols] = scaler_end.transform(df_train[df_train.distrib_brdr == 0][num_cols])
+test.loc[df_test.query('distrib_brdr == 0').index, num_cols]  = scaler_end.transform(df_test[df_test.distrib_brdr == 0][num_cols])
 # In[ ]:
 
 
