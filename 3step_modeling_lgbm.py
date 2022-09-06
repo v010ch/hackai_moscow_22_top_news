@@ -20,7 +20,7 @@ import time
 notebookstart= time.time()
 
 
-# In[4]:
+# In[3]:
 
 
 import os
@@ -35,17 +35,17 @@ from sklearn import preprocessing
 import lightgbm as lgb
 
 from itertools import product
-from typing import Tuple
+from typing import Tuple, Dict, List
 
 
-# In[5]:
+# In[6]:
 
 
 from tqdm.auto import tqdm
 tqdm.pandas()
 
 
-# In[6]:
+# In[7]:
 
 
 #from catboost import __version__ as cb_version
@@ -55,7 +55,7 @@ from sklearn import __version__ as sklearn_version
 print(f'sklearn_version: {sklearn_version}')
 
 
-# In[7]:
+# In[8]:
 
 
 get_ipython().run_line_magic('watermark', '--iversions')
@@ -73,9 +73,9 @@ get_ipython().run_line_magic('watermark', '--iversions')
 
 
 
-# ## Reproducibility block
+# ## Блок для воспроизводимости результатов
 
-# In[8]:
+# In[9]:
 
 
 # seed the RNG for all devices (both CPU and CUDA)
@@ -105,7 +105,9 @@ LGB_RANDOMSEED = 874256
 
 
 
-# In[9]:
+# ## Выствляем переменные
+
+# In[10]:
 
 
 DIR_DATA   = os.path.join(os.getcwd(), 'data')
@@ -120,16 +122,18 @@ DIR_SUBM_PART = os.path.join(os.getcwd(), 'subm', 'partial')
 
 
 
-# In[10]:
+# In[11]:
 
 
+# номер попытки и название файла сабмита
 NTRY = 32
 NAME = f'{NTRY}_lgb_pca64_sber_bord_nose_iter_2mod'
 
 
-# In[11]:
+# In[12]:
 
 
+# константы по Украине для замены в сабмитах 
 VIEWS_UKR = 2554204
 DEPTH_UKR = 1.799
 FPR_UKR = 4.978
@@ -141,7 +145,7 @@ FPR_UKR = 4.978
 
 
 
-# ## Load data
+# ## Загрузка данных
 
 # In[12]:
 
@@ -165,6 +169,8 @@ df_train.shape, df_test.shape,
 df_train['category'] = df_train['category'].astype('category')
 df_test['category']  = df_test['category'].astype('category')
 
+
+# Распределяем признаки по числовым и категориальным
 
 # In[15]:
 
@@ -201,11 +207,21 @@ len(num_cols)
 
 
 def r2(preds: np.ndarray, data: lgb.Dataset) -> Tuple[str, float, bool]:
+    """
+    Функция для расчета дополнительной метрики R2 в cv.
+    
+    args:
+        preds - предсказанные моделью значения
+        data  - входной датасет на котором обучалась модель
+                необходим для извлечения таргетов
+    return:
+        Tuple
+            str   - имя метрики. необходимо для отображения в scores cv
+            float - значение метрики r2
+            bool  - было ли выставленно значение is_higher_better
+    """
+    
     label = data.get_label()
-    #weight = data.get_weight()
-    #p_dash = (1 - label) + (2 * label - 1) * preds
-    #loss_by_example = - np.log(p_dash)
-    #loss = np.average(loss_by_example, weights=weight)
 
     # # eval_name, eval_result, is_higher_better
     return 'r2', r2_score(preds, label), True
@@ -217,39 +233,21 @@ def r2(preds: np.ndarray, data: lgb.Dataset) -> Tuple[str, float, bool]:
 
 
 
-# In[ ]:
-
-
-
-
-
-# In[ ]:
-
-
-
-
-lgbm_params =  {
-    'task': 'train',
-    'boosting_type': 'gbdt',
-    'objective': 'regression',
-    'metric': 'rmse',
-    "learning_rate": 0.01,
-    "num_leaves": 180,
-    "feature_fraction": 0.50,
-    "bagging_fraction": 0.50,
-    'bagging_freq': 4,
-    "max_depth": -1,
-    "reg_alpha": 0.3,
-    "reg_lambda": 0.1,
-    #"min_split_gain":0.2,
-    "min_child_weight":10,
-    'zero_as_missing':True
-                }
 # In[19]:
 
 
-def train_lgb_cat(inp_df, inp_vals, inp_category, inp_cat_cols, inp_num_cols):
-
+# не импользовалась в финальном решении
+def train_lgb_cat(inp_df: pd.DataFrame , inp_vals: pd.DataFrame, inp_category: str, inp_cat_cols: List[str], inp_num_cols: List[str]) -> List[str]:
+    """
+    Функция перебор гипервараметров. Сохраняет список лучших пераметров.
+    В список лучших попадают параметры если только они улучшили предыдущее 
+    лучшее значение метрики rmse-mean на валидационных фолдах.
+    
+    args:
+    
+    params:
+    
+    """
     
     num_of_leaves_vars    = [4, 8, 16, 32, 64, 128]
     max_depth_vars        = [4, 8, 16, 32]#, 64, 128]
@@ -283,7 +281,7 @@ def train_lgb_cat(inp_df, inp_vals, inp_category, inp_cat_cols, inp_num_cols):
         }
 
 
-        train_ds_views = lgb.Dataset(inp_df[inp_df.category == inp_category][cat_cols + num_cols],
+        train_ds_views = lgb.Dataset(inp_df[inp_df.category == inp_category][inp_cat_cols + inp_num_cols],
                                      #inp_df[cat_cols + num_cols],
                                      inp_vals[inp_df.category == inp_category][['views']],
                                      #feature_name = [cat_cols + num_cols]
@@ -310,30 +308,64 @@ def train_lgb_cat(inp_df, inp_vals, inp_category, inp_cat_cols, inp_num_cols):
     
     return ret_progress
 
-'5409f11ce063da9c8b588a12', '5409f11ce063da9c8b588a13', '5409f11ce063da9c8b588a18', '540d5eafcbb20f2524fc0509', '540d5ecacbb20f2524fc050a', '5433e5decbb20f277b20eca9'
+
+# In[ ]:
+
+
+def get_model(inp_ds: lgb.Dataset, inp_params: Dict):
+    """
+    Тренировка модели после обучения на cv на 5 фолдов и выбора оптимального количества итераций.
+    
+    args:
+        inp_df - lgb.Dataset для обучение
+        inp_params - входные параметры для модели
+    return:
+        обученная lgbm модель
+    """
+    
+    score = lgb.cv(inp_params, 
+                 inp_ds, 
+                 #num_boost_round = 10000,
+                 num_boost_round=600,
+                 nfold = 5,
+                 verbose_eval = 500,
+                 #early_stopping_rounds = 100,
+                 stratified = False,
+                 eval_train_metric = r2,
+                 feval = r2,
+                 #return_cvbooster = True,
+                )
+    print(np.argmin(score['valid rmse-mean']), score['train rmse-mean'][np.argmin(score['valid rmse-mean'])], score['train rmse-stdv'][np.argmin(score['valid rmse-mean'])], )
+    print(np.argmin(score['valid rmse-mean']), score['valid rmse-mean'][np.argmin(score['valid rmse-mean'])], score['valid rmse-stdv'][np.argmin(score['valid rmse-mean'])], )
+
+    print(np.argmax(score['valid r2-mean']), score['train r2-mean'][np.argmax(score['valid r2-mean'])], score['train r2-stdv'][np.argmax(score['valid r2-mean'])], )
+    print(np.argmax(score['valid r2-mean']), score['valid r2-mean'][np.argmax(score['valid r2-mean'])], score['valid r2-stdv'][np.argmax(score['valid r2-mean'])], )
+    
+    
+    niters = np.argmin(score['valid rmse-mean'])
+    print(niters)
+    
+    lgb_model = lgb.train(inp_params,
+                            train_set = inp_ds,
+                            num_boost_round = niters,
+                            #early_stopping_rounds=30,
+                            verbose_eval = False,
+                           )
+    
+    
+    return lgb_model
+
+gbdt, traditional Gradient Boosting Decision Tree, aliases: gbrt
+rf, Random Forest, aliases: random_forest
+dart, Dropouts meet Multiple Additive Regression Trees
+goss, Gradient-based One-Side Sampling
 # In[ ]:
 
 
 
 
 
-# In[ ]:
-
-
-
-
-
-# In[20]:
-
-
-df_train[df_train.distrib_brdr == 1].shape, df_train[df_train.distrib_brdr == 0].shape
-
-
-# In[21]:
-
-
-df_test[df_test.distrib_brdr == 1].shape, df_test[df_test.distrib_brdr == 0].shape
-
+# Собираем датасеты отдельные для дат до 8 апреля и после
 
 # In[22]:
 
@@ -347,7 +379,6 @@ train_views_end = lgb.Dataset(df_train[df_train.distrib_brdr == 0][cat_cols + nu
                              df_train[df_train.distrib_brdr == 0][['views']],
                              #feature_name = [cat_cols + num_cols]
                             )
-
 #lgb_eval = lgb.Dataset(x_test, y_test, reference=lgb_train)
 
 
@@ -383,10 +414,7 @@ train_frp_end = lgb.Dataset(df_train[df_train.distrib_brdr == 0][cat_cols + num_
 
 
 
-gbdt, traditional Gradient Boosting Decision Tree, aliases: gbrt
-rf, Random Forest, aliases: random_forest
-dart, Dropouts meet Multiple Additive Regression Trees
-goss, Gradient-based One-Side Sampling
+
 # ## views
 
 # In[23]:
@@ -413,93 +441,6 @@ params = {
 }
 
 
-# In[ ]:
-
-
-
-
-
-# In[24]:
-
-
-def get_model(inp_ds, inp_params):
-    
-    score = lgb.cv(inp_params, 
-                 inp_ds, 
-                 #num_boost_round = 10000,
-                 num_boost_round=600,
-                 nfold = 5,
-                 verbose_eval = 500,
-                 #early_stopping_rounds = 100,
-                 stratified = False,
-                 eval_train_metric = r2,
-                 feval = r2,
-                 #return_cvbooster = True,
-                )
-    print(np.argmin(score['valid rmse-mean']), score['train rmse-mean'][np.argmin(score['valid rmse-mean'])], score['train rmse-stdv'][np.argmin(score['valid rmse-mean'])], )
-    print(np.argmin(score['valid rmse-mean']), score['valid rmse-mean'][np.argmin(score['valid rmse-mean'])], score['valid rmse-stdv'][np.argmin(score['valid rmse-mean'])], )
-
-    print(np.argmax(score['valid r2-mean']), score['train r2-mean'][np.argmax(score['valid r2-mean'])], score['train r2-stdv'][np.argmax(score['valid r2-mean'])], )
-    print(np.argmax(score['valid r2-mean']), score['valid r2-mean'][np.argmax(score['valid r2-mean'])], score['valid r2-stdv'][np.argmax(score['valid r2-mean'])], )
-    
-    
-    niters = np.argmin(score['valid rmse-mean'])
-    print(niters)
-    
-    lgb_model = lgb.train(inp_params,
-                            train_set = inp_ds,
-                            num_boost_round = niters,
-                            #early_stopping_rounds=30,
-                            verbose_eval = False,
-                           )
-    
-    
-    return lgb_model
-
-
-# In[ ]:
-
-
-
-
-%%time
-score_v_s = lgb.cv(params, 
-                 train_views_full_start, 
-                 #num_boost_round = 10000,
-                 num_boost_round=600,
-                 nfold = 5,
-                 verbose_eval = 500,
-                 #early_stopping_rounds = 100,
-                 stratified = False,
-                 eval_train_metric = r2,
-                 feval = r2,
-                 #return_cvbooster = True,
-                )
-print(np.argmin(score_v_s['valid rmse-mean']), score_v_s['train rmse-mean'][np.argmin(score_v_s['valid rmse-mean'])], score_v_s['train rmse-stdv'][np.argmin(score_v_s['valid rmse-mean'])], )
-print(np.argmin(score_v_s['valid rmse-mean']), score_v_s['valid rmse-mean'][np.argmin(score_v_s['valid rmse-mean'])], score_v_s['valid rmse-stdv'][np.argmin(score_v_s['valid rmse-mean'])], )
-
-print(np.argmax(score_v_s['valid r2-mean']), score_v_s['train r2-mean'][np.argmax(score_v_s['valid r2-mean'])], score_v_s['train r2-stdv'][np.argmax(score_v_s['valid r2-mean'])], )
-print(np.argmax(score_v_s['valid r2-mean']), score_v_s['valid r2-mean'][np.argmax(score_v_s['valid r2-mean'])], score_v_s['valid r2-stdv'][np.argmax(score_v_s['valid r2-mean'])], )
-# In[25]:
-
-
-#score_v.keys()
-
-
-# In[26]:
-
-
-#if np.argmin(score_v['valid rmse-mean']) != np.argmax(score_v['valid r2-mean']):
-#    raise ValueError('wtf?', np.argmin(score_v['valid rmse-mean']), np.argmax(score_v['valid r2-mean']))
-
-1661 48897.91696678655 9179.139175918961#views_iter = np.argmax(score_v['valid r2-mean'])
-views_start_iter = np.argmin(score_v['valid rmse-mean'])
-print(views_iter)lgb_model_views = lgb.train(params,
-                            train_set=train_views_full_start,
-                            num_boost_round = views_iter,
-                            #early_stopping_rounds=30,
-                            verbose_eval = False,
-                           )
 # In[27]:
 
 
@@ -584,43 +525,6 @@ params = {
     'random_seed': LGB_RANDOMSEED,
 }
 
-%%time
-score_d = lgb.cv(params, 
-                 train_depth_full, 
-                 #num_boost_round = 10000,
-                 num_boost_round=600,
-                 nfold = 5,
-                 verbose_eval = 500,
-                 #early_stopping_rounds = 100,
-                 stratified = False,
-                 eval_train_metric = r2,
-                 feval = r2,
-                 #return_cvbooster = True,
-                )
-print(np.argmin(score_d['valid rmse-mean']), score_d['train rmse-mean'][np.argmin(score_d['valid rmse-mean'])], score_d['train rmse-stdv'][np.argmin(score_d['valid rmse-mean'])], )
-print(np.argmin(score_d['valid rmse-mean']), score_d['valid rmse-mean'][np.argmin(score_d['valid rmse-mean'])], score_d['valid rmse-stdv'][np.argmin(score_d['valid rmse-mean'])], )
-
-print(np.argmax(score_d['valid r2-mean']), score_d['train r2-mean'][np.argmax(score_d['valid r2-mean'])], score_d['train r2-stdv'][np.argmax(score_d['valid r2-mean'])], )
-print(np.argmax(score_d['valid r2-mean']), score_d['valid r2-mean'][np.argmax(score_d['valid r2-mean'])], score_d['valid r2-stdv'][np.argmax(score_d['valid r2-mean'])], )378 0.02735314197033909 0.0009451007887406206
-# In[32]:
-
-
-#if np.argmin(score_d['valid rmse-mean']) != np.argmax(score_d['valid r2-mean']):
-#    raise ValueError('wtf?', np.argmin(score_d['valid rmse-mean']), np.argmax(score_d['valid r2-mean']))
-
-#depth_iter = np.argmax(score_d['valid r2-mean'])
-depth_iter = np.argmin(score_d['valid rmse-mean'])
-print(depth_iter)# fitting the model
-lgb_model_depth = lgb.train(params,
-                            train_set=train_depth_full,
-                            num_boost_round = depth_iter,
-                            verbose_eval = False,
-                           )
-# In[ ]:
-
-
-
-
 
 # In[33]:
 
@@ -669,32 +573,7 @@ lgb.plot_importance(lgb_model_depth_end, max_num_features = 30, figsize = (30, 1
 
 
 # ## full_reads_percent
-score_f = lgb.cv(params, 
-                 train_frp_full, 
-                 #num_boost_round = 10000,
-                 num_boost_round=600,
-                 nfold = 5,
-                 verbose_eval = 500,
-                 #early_stopping_rounds = 100,
-                 stratified = False,
-                 eval_train_metric = r2,
-                 feval = r2,
-                 #return_cvbooster = True,
-                )
-print(np.argmin(score_f['valid rmse-mean']), score_f['train rmse-mean'][np.argmin(score_f['valid rmse-mean'])], score_f['train rmse-stdv'][np.argmin(score_f['valid rmse-mean'])], )
-print(np.argmin(score_f['valid rmse-mean']), score_f['valid rmse-mean'][np.argmin(score_f['valid rmse-mean'])], score_f['valid rmse-stdv'][np.argmin(score_f['valid rmse-mean'])], )
 
-print(np.argmax(score_f['valid r2-mean']), score_f['train r2-mean'][np.argmax(score_f['valid r2-mean'])], score_f['train r2-stdv'][np.argmax(score_f['valid r2-mean'])], )
-print(np.argmax(score_f['valid r2-mean']), score_f['valid r2-mean'][np.argmax(score_f['valid r2-mean'])], score_f['valid r2-stdv'][np.argmax(score_f['valid r2-mean'])], )163 7.02038356002961 0.1360496068604094   / 116 / 111
-# In[37]:
-
-
-#if np.argmin(score_f['valid rmse-mean']) != np.argmax(score_f['valid r2-mean']):
-#    raise ValueError('wtf?', np.argmin(score_f['valid rmse-mean']), np.argmax(score_f['valid r2-mean']))
-
-#frp_iter = np.argmax(score_f['valid r2-mean'])
-frp_iter = np.argmin(score_f['valid rmse-mean'])
-print(frp_iter)
 # In[38]:
 
 
@@ -718,14 +597,7 @@ params = {
     'random_seed': LGB_RANDOMSEED,
 }
 
-# fitting the model
-lgb_model_frp = lgb.train(params,
-                            train_set=train_frp_full,#train_set=train_ds_frp,
-                            #valid_sets=val_ds_frp,
-                            num_boost_round = frp_iter,
-                            #early_stopping_rounds=30,
-                            verbose_eval = False,
-                           )
+
 # In[39]:
 
 
@@ -786,7 +658,7 @@ lgb.plot_importance(lgb_model_frp_start, max_num_features = 30, figsize = (30, 1
 
 
 
-# ## save models
+# ## Сохраняем модели
 
 # In[43]:
 
@@ -871,14 +743,7 @@ pred_train.to_csv(os.path.join(DIR_SUBM_PART, f'{NAME}_train_part.csv'), index =
 
 
 # # Делаем предсказание для теста
-pred_views = lgb_model_views.predict(df_test[cat_cols + num_cols])
-pred_depth = lgb_model_depth.predict(df_test[cat_cols + num_cols])
-pred_frp   = lgb_model_frp.predict(  df_test[cat_cols + num_cols])subm = pd.DataFrame()
-subm['document_id'] = df_test.document_id
 
-subm['views'] = pred_views
-subm['depth'] = pred_depth
-subm['full_reads_percent'] = pred_frp
 # In[66]:
 
 
@@ -922,6 +787,8 @@ subm.drop(['distrib_brdr'], axis = 1, inplace = True)
 
 
 
+
+# Заменяем константные значения по Украине
 
 # In[71]:
 

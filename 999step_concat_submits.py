@@ -4,7 +4,13 @@
 # In[ ]:
 
 
+get_ipython().run_line_magic('load_ext', 'watermark')
 
+
+# In[ ]:
+
+
+get_ipython().run_line_magic('watermark', '')
 
 
 # In[1]:
@@ -40,8 +46,22 @@ from typing import Tuple
 # In[ ]:
 
 
+get_ipython().run_line_magic('watermark', '--iversions')
 
 
+# In[ ]:
+
+
+
+
+
+# In[ ]:
+
+
+
+
+
+# ## Выствляем переменные
 
 # In[4]:
 
@@ -55,6 +75,7 @@ DIR_SUBM_PART = os.path.join(os.getcwd(), 'subm', 'partial')
 # In[5]:
 
 
+# номер попытки и название файлов сабмитов
 NTRY = 28
 NAME_ENS = f'{NTRY}_ens_pca64_sber_nose_iter_2mod'
 NAME_CB  = f'{NTRY}_cb_pca64_sber_bord_nose_iter_2mod'
@@ -68,10 +89,19 @@ NAME_MN = f'{NTRY}_mn_pca64_sber_nose_iter_2mod'
 # In[6]:
 
 
+# константы по Украине для замены в сабмитах 
 VIEWS_UKR = 2554204
 DEPTH_UKR = 1.799
 FPR_UKR = 4.978
 
+
+# In[ ]:
+
+
+
+
+
+# ## Блок для воспроизводимости результатов
 
 # In[7]:
 
@@ -167,10 +197,15 @@ print('after ', test.shape)
 test.columns
 
 
-# In[11]:
+# In[1]:
 
 
-def get_views_mean(inp_row):
+def get_views_mean(inp_row: pd.DataFrame) -> float:
+    """
+    Подсчет среднего views по строке датафрейма (по сабмитам от трех моделей)
+    args:
+        inp_row - строка датафрейма по которой считается среднее
+    """
     
     #print(inp_row[3], inp_row[6], inp_row[9]) 
     val = np.mean([inp_row[3], inp_row[6], inp_row[9]])
@@ -178,8 +213,12 @@ def get_views_mean(inp_row):
     return val
 
 
-def get_depth_mean(inp_row):
-    
+def get_depth_mean(inp_row: pd.DataFrame) -> float:
+    """
+    Подсчет среднего depth по строке датафрейма (по сабмитам от трех моделей)
+    args:
+        inp_row - строка датафрейма по которой считается среднее
+    """
     #print(inp_row[4], inp_row[7], inp_row[10])
     val = np.mean([inp_row[4], inp_row[7], inp_row[10]])
     
@@ -187,8 +226,12 @@ def get_depth_mean(inp_row):
 
 
 
-def get_frp_mean(inp_row):
-    
+def get_frp_mean(inp_row: pd.DataFrame) -> float:
+    """
+    Подсчет среднего frp по строке датафрейма (по сабмитам от трех моделей)
+    args:
+        inp_row - строка датафрейма по которой считается среднее
+    """
     #print(inp_row[5], inp_row[8], inp_row[11])
     val = np.mean([inp_row[5], inp_row[8], inp_row[11]])
     
@@ -268,13 +311,21 @@ subm_mn.to_csv(os.path.join(DIR_SUBM, f'{NAME_MN}.csv'), index = False)
 # In[8]:
 
 
-def plot_importance(inp_model, imp_number = 30, imp_type = 'weight'):
-    feature_important = inp_model.get_booster().get_score(importance_type=imp_type)
+def plot_importance(inp_model, imp_number: Optional[int] = 30, imp_type: Optional[str] = 'weight') -> None:
+    """
+    Функция построения и отображения важности признаков в модели
+    args:
+        inp_model - модель из которой берется важности признаков
+        inp_number - количество признаков для отображения (опционально, 30)
+        imp_type - тип по которому определяется важность признака (опционально, 'weight')
+    """
+    feature_important = inp_model.get_booster().get_score(importance_type = imp_type)
     keys = list(feature_important.keys())
     values = list(feature_important.values())
 
-    data = pd.DataFrame(data=values, index=keys, columns=["score"]).sort_values(by = "score", ascending=False)
-    data.nlargest(imp_number, columns="score").plot(kind='barh', figsize = (30,16)) ## plot top 40 features
+    data = pd.DataFrame(data = values, index = keys, columns = ["score"]).sort_values(by = "score", ascending = False)
+    data.nlargest(imp_number, columns = "score").plot(kind = 'barh', figsize = (30,16))
+    
 
 
 # In[9]:
@@ -410,8 +461,18 @@ test.loc[test.query('distrib_brdr == 0').index, train_cols]  = scaler_end.transf
 # In[18]:
 
 
-#def r2(predt: np.ndarray, dtrain: xgb.DMatrix) -> Tuple[str, float]:
 def r2(y_pred: np.ndarray, y_true: xgb.DMatrix) -> Tuple[str, float]:
+    """
+    Функция для расчета дополнительной метрики R2 в cv.
+    
+    args:
+        y_pred - предсказанные значения
+        y_true - целевые значения
+    return:
+        Tuple
+            str - имя метрики для отображения в cv scores
+            float - значение метрики
+    """
     
     return 'r2', r2_score(y_true.get_label(), y_pred)
 
@@ -440,9 +501,19 @@ xgb_params_views = {
 # In[20]:
 
 
-def get_model(inp_df, inp_params, target):
+def get_model(inp_df: pd.DataFrame, inp_params: Dict, target: str):
+    """
+    Обучение модели с выбором оптимального количества итераци по cv на 5 фолдов
+    по метрике rmse-mean на валидационных фолдах
+    args:
+        inp_df - датасет для обучения
+        inp_params - параметры модели
+        target - имя колонки целевого значения
+    return:
+        обученная модель XGBRegressor
+    """
     
-    dtrain = xgb.DMatrix(inp_df[train_cols], label = inp_df[[target]])
+    dtrain = xgb.DMatrix(inp_df[num_cols], label = inp_df[[target]])
     
     scores = xgb.cv(inp_params, dtrain, cv_ntrees, nfold=5, #early_stopping_rounds=1000,
         metrics={'rmse'},
@@ -458,24 +529,17 @@ def get_model(inp_df, inp_params, target):
                                #eta=0.1, 
                                #subsample=0.7, 
                                #colsample_bytree=0.8,
-                               
                                n_jobs = -1,
                                random_state = XGB_RANDOMSEED,
                               )
 
-    model.fit(inp_df[train_cols], inp_df[target], 
+    model.fit(inp_df[num_cols], inp_df[target], 
                     verbose=False
                    )
     
     return model
 
-%%time
-score = xgb.cv(xgb_params_views, dtrain, cv_ntrees, nfold=5, #early_stopping_rounds=1000,
-        metrics={'rmse'},
-        custom_metric = r2,
-       #callbacks=[xgb.callback.EvaluationMonitor(show_stdv=True)]
-      )
-score.tail()score[score['train-r2-mean'] == score['train-r2-mean'].max()][:1]score[score['test-r2-mean'] == score['test-r2-mean'].max()][:1]
+
 # In[ ]:
 
 
@@ -542,40 +606,6 @@ xgb_params_depth = {
 }
 #dtrain = xgb.DMatrix(train[train.columns[4:]], label=train[['depth']])
 
-%%time
-score = xgb.cv(xgb_params_depth, dtrain, cv_ntrees, nfold=5, #early_stopping_rounds=1000,
-        metrics={'rmse'},
-        custom_metric = r2,
-       #callbacks=[xgb.callback.EvaluationMonitor(show_stdv=True)]
-      )
-score.tail()score[score['train-r2-mean'] == score['train-r2-mean'].max()][:1]score[score['test-r2-mean'] == score['test-r2-mean'].max()][:1]xgb_model_depth = XGBRegressor(n_estimators=45, 
-                               max_depth=15, 
-                               eta=0.3, 
-                               #subsample=0.7, 
-                               #colsample_bytree=0.8,
-                               n_jobs = -1,
-                               random_state = XGB_RANDOMSEED,
-                              )
-
-xgb_model_depth.fit(train[train.columns[4:]], train[['depth']],
-                    early_stopping_rounds=5,
-                    eval_set=[(val[val.columns[4:]], val[['depth']])], 
-                    verbose=False
-                   )
-
-# Get predictions and metrics
-preds_train_depth = xgb_model_depth.predict(train[train.columns[4:]])
-preds_val_depth   = xgb_model_depth.predict(val[train.columns[4:]])
-
-train_score_depth = r2_score(train["depth"], preds_train_depth)
-val_score_depth   = r2_score(val["depth"],   preds_val_depth)
-
-train_score_depth, val_score_depth
-# In[ ]:
-
-
-
-
 
 # In[26]:
 
@@ -630,52 +660,6 @@ xgb_params_frp = {
     #'early_stopping_rounds': 100,
 }
 #dtrain = xgb.DMatrix(train[train.columns[4:]], label=train[['full_reads_percent']])
-
-%%time
-score = xgb.cv(xgb_params_frp, dtrain, cv_ntrees, nfold=5, #early_stopping_rounds=1000,
-        metrics={'rmse'},
-        custom_metric = r2,
-       #callbacks=[xgb.callback.EvaluationMonitor(show_stdv=True)]
-      )
-score.tail()score[score['train-r2-mean'] == score['train-r2-mean'].max()][:1]score[score['test-r2-mean'] == score['test-r2-mean'].max()][:1]
-# In[ ]:
-
-
-
-
-xgb_model_frp = XGBRegressor(n_estimators=45, 
-                               max_depth=15, 
-                               eta=0.3, 
-                               #subsample=0.7, 
-                               #colsample_bytree=0.8,
-                               n_jobs = -1,
-                               random_state = XGB_RANDOMSEED,
-                              )
-
-xgb_model_frp.fit(train[train.columns[4:]], train[['full_reads_percent']],
-                    early_stopping_rounds=5,
-                    eval_set=[(val[val.columns[4:]], val[['full_reads_percent']])], 
-                    verbose=False
-                   )
-
-# Get predictions and metrics
-preds_train_frp = xgb_model_frp.predict(train[train.columns[4:]])
-preds_val_frp   = xgb_model_frp.predict(val[train.columns[4:]])
-
-train_score_frp = r2_score(train["full_reads_percent"], preds_train_frp)
-val_score_frp   = r2_score(val["full_reads_percent"],   preds_val_frp)
-
-train_score_frp, val_score_frp
-# In[ ]:
-
-
-
-
-
-# In[ ]:
-
-
-
 
 
 # In[31]:
