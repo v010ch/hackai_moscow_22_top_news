@@ -1,24 +1,16 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[8]:
+# In[1]:
 
 
-import os
-from typing import Tuple, Optional
+get_ipython().run_line_magic('load_ext', 'watermark')
 
-from selenium import webdriver
-from scipy import stats as sts
-import requests as rq
-from bs4 import BeautifulSoup as bs
-import re
 
-import time
-from tqdm.auto import tqdm
-tqdm.pandas()
+# In[2]:
 
-import pandas as pd
-import numpy as np
+
+get_ipython().run_line_magic('watermark', '')
 
 
 # In[ ]:
@@ -30,12 +22,62 @@ import numpy as np
 # In[3]:
 
 
-DIR_DATA = os.path.join(os.getcwd(), 'data')
+import time
+notebookstart = time.time()
 
 
 # In[4]:
 
 
+import os
+
+from selenium import webdriver
+from webdriver_manager.chrome import ChromeDriverManager
+#from webdriver_manager.firefox import GeckoDriverManager
+
+from scipy import stats as sts
+import requests as rq
+from bs4 import BeautifulSoup as bs
+import re
+
+#import time
+from typing import Tuple, Optional, List
+from tqdm.auto import tqdm
+tqdm.pandas()
+
+import pandas as pd
+import numpy as np
+
+
+# In[5]:
+
+
+# ------ если используется multiprocessing должно быть откомментировано
+import multiprocessing as mp
+
+# ------ если используется ray должно быть откомментировано
+import ray
+ray.init()
+
+
+# In[ ]:
+
+
+
+
+
+# Переменные
+
+# In[6]:
+
+
+DIR_DATA = os.path.join(os.getcwd(), 'data')
+
+
+# In[7]:
+
+
+# минимальная и максимальная задержка при загрузке страниц
 MIN_DELAY = 2.673 #2.17 #2.673
 MAX_DELAY = 5.386 #4.8 #7.22 #9.181
 
@@ -46,20 +88,15 @@ MAX_DELAY = 5.386 #4.8 #7.22 #9.181
 
 
 
-# In[5]:
-
-
-#LOAD_NUMBER = 0
-#LAST_LOAD = time.time()
-
-
-# In[ ]:
+# In[8]:
 
 
 
 
 
-# In[6]:
+# # Загрузка данных
+
+# In[9]:
 
 
 df_train = pd.read_csv(os.path.join(DIR_DATA, 'train.csv'))
@@ -77,60 +114,78 @@ df_train.shape, df_test.shape
 
 
 
-# In[9]:
+# # Сохранение статей с РБК
+
+# In[ ]:
 
 
 class UserEmulate:
-    
-    def __init__(self, inp_min_delay: int, inp_max_delay: int):
-        self.load_number = 0
-        self.last_load  = time.time()
-        
+    def __init__(self, inp_min_delay: float, inp_max_delay: float) -> None:
         self.min_delay = inp_min_delay
         self.max_delay = inp_max_delay
         
-        
-        
+        self.last_time = time.time()
+        self.numb_load = 0
 
-    def resetusage(self, inp_min_delay: Optional[int] = -1, inp_max_delay: Optional[int] = -1) -> None:
-        self.load_number = 0
-        self.last_load   = time.time()
+
         
+    def reset(self, inp_min_delay: Optional[float], inp_max_delay: Optional[float]) -> None:
+        """
+        Сброс парметров и выставление новых мин и макс задержки
+        args
+            inp_min_delay - минимальная задержка между загрузками страниц (опционально)
+            inp_max_delay - максимальная задержка между загрузками страниц (опционально)
+        """
+        self.last_time = time.time()
+        self.numb_load = 0
         
-        if inp_min_delay > 0:
+        if isinstance(inp_min_delay, float):
             self.min_delay = inp_min_delay
-        
-        if inp_min_delay > 0:
+            
+        if isinstance(inp_max_delay, float):
             self.max_delay = inp_max_delay
+       
+    
+    
+    def updatecurrentstate(self):
+        """
+        Обновление внутреннего состояния класса
+        """
+        self.last_time = time.time()
+        self.numb_load += 1
         
-        return
-        
-        
-        
-    def pauserealuseremulate(self, numb_load: int, last_time: int) -> None:
 
-        if numb_load %7 == 0:
+        
+    def pauserealuseremulate(self) -> None:
+        """
+        Эмуляция задержки между кликами пользователя.
+        Каждый седьмой клик из нормального распределения
+        Каждый третий (при не кратности 7) из хи-квадрат
+        Остальные из гамма
+        """
+        if self.numb_load %7 == 0:
             pause_time = sts.norm.rvs(loc=2, scale=3, size=1)[0]
-        elif numb_load %3 == 0:
+        elif self.numb_load %3 == 0:
             pause_time = sts.chi2.rvs(df = 1.7, loc = 0, scale = 1, size=1)[0]
         else:
             pause_time = sts.gamma.rvs(a = 1, loc = 1, scale = 2, size=1)[0]
 
-        if (time.time() - last_time) > pause_time:
+        if (time.time() - self.last_time) > pause_time:
+            self.updatecurrentstate()
             return
 
-        #if pause_time >= MIN_DELAY and pause_time <= MAX_DELAY:
-        if pause_time >= self.min_delay and pause_time <= self.mac_delay:
+        if pause_time >= self.min_delay and pause_time <= self.max_delay:
             #print(pause_time)
-            time.sleep(pause_time - abs(time.time() - last_time))
+            time.sleep(pause_time - abs(time.time() - self.last_time))
+            self.updatecurrentstate()
             pass
         else:
-            pauserealuseremulate(numb_load, last_time)
+            pauserealuseremulate()
 
         return
 
 
-# In[10]:
+# In[31]:
 
 
 category_decode = {
@@ -183,58 +238,32 @@ category_decode = {
                                 },  
 }
 
-5409f11ce063da9c8b588a12
 
-648
-https://www.rbc.ru/politics/22/03/2022/623a42f49a7947092e9f8a6byyO-cdUwQK2SyNATEJw4Hg
-https://www.rbc.ru/rbcfreenews/623a42f49a7947092e9f8a6b
-
-1511
-624463cd9a79476ed1dfc869E_KUrdstQmmg6BC2cXKeQw
-https://www.rbc.ru/politics/30/03/2022/624463cd9a79476ed1dfc869
-
-1808
-620d619f9a7947376b27bfa4Inynzi57Rha5kH_bTmf7rg
-https://www.rbc.ru/rbcfreenews/620d619f9a7947376b27bfa4
-    
-    
-    
-    
-5433e5decbb20f277b20eca9
-
-1868
-623326679a794756b8f2a9689gvGuGVAQdSks_mvJUPH0g
-https://www.rbc.ru/photoreport/26/03/2022/623326679a794756b8f2a968
-
-2270
-628f46d79a7947a590484e1fCdVz8DVMScWTjWmc-egG6Q
-https://www.rbc.ru/society/26/05/2022/628f46d79a7947a590484e1f    
-
-2320
-620099d69a794755aba55d7ay3GfLOkyT0udO4mpPvGtpg
-https://www.rbc.ru/society/07/02/2022/620099d69a794755aba55d7a
-    
-176
-6244c29b9a79478f9a339bca0RwqdNMOSfeAefxAr_8Wwg
-https://www.rbc.ru/society/31/03/2022/6244c29b9a79478f9a339bca
-# In[11]:
+# In[32]:
 
 
+# очистка текста
 clean_text = lambda x:' '.join(re.sub('\n|\r|\t|[^а-яА-Яa-zA-Z]', ' ', x).split()) #.lower()
 
 
-# In[9]:
+# In[33]:
 
 
-def get_article_data(inp_df):
+def get_article_data(inp_df: pd.DataFrame) -> bool:
+    """Загрузка и сохранение страницы при помощи selenium c 
+    минимальной эмуляцией поведения человека
     
-    global load_number
-    global last_load
+    args
+        inp_df - строка для которой необходимо загрузить страницу
+                 на основе document_id
+        
+    return
+        True  - страница загружена и сохранена
+        False - проблеммы загрузки страницы (404). страница не сохранена
+    """
     
-    #article = ''
+    ue = UserEmulate(MIN_DELAY, MAX_DELAY)
     
-    #print(inp_df[1])
-    #print(inp_df[1].dt.date.day)
     date = inp_df[1].strftime('%d/%m/%Y')
     category = category_decode[inp_df[2]]['link']
     link_hash = inp_df[0][:24]
@@ -243,9 +272,7 @@ def get_article_data(inp_df):
     driver.get(url)
     
     # эмулируем задержки пользователя
-    pauserealuseremulate(load_number, last_load)
-    last_load = time.time()
-    load_number += 1
+    ue.pauserealuseremulate()
     
     # 404
     if len(driver.find_elements_by_class_name('error__title')) != 0:
@@ -263,9 +290,7 @@ def get_article_data(inp_df):
         driver.get(url)
         
         # эмулируем задержки пользователя
-        pauserealuseremulate(load_number, last_load)
-        last_load = time.time()
-        load_number += 1
+        ue.pauserealuseremulate()
     
         # документ вне категории и rbcfreenews
         if len(driver.find_elements_by_class_name('error__title')) != 0:
@@ -278,18 +303,25 @@ def get_article_data(inp_df):
     return True
 
 
-# In[10]:
+# In[34]:
 
 
-def check_for_news(inp_df):
+#  в финальном варианте не используется
+def check_for_news(inp_df: pd.DataFrame) -> str:
+    """Проверка есть ли статья по адресу в соответствии с категорией
+    или только в разделе новости с возвращением определенной категории
     
-    global load_number
-    global last_load
+    args
+        inp_df - строка для которой необходимо загрузить страницу
+                 на основе document_id
+                 
+    return
+        str - установленная категория
+    """
     
-    #article = ''
     
-    #print(inp_df[1])
-    #print(inp_df[1].dt.date.day)
+    ue = UserEmulate(MIN_DELAY, MAX_DELAY)
+    
     date = inp_df[1].strftime('%d/%m/%Y')
     category = category_decode[inp_df[2]]['link']
     link_hash = inp_df[0][:24]
@@ -298,10 +330,8 @@ def check_for_news(inp_df):
     driver.get(url)
     
     # эмулируем задержки пользователя
-    pauserealuseremulate(load_number, last_load)
-    last_load = time.time()
-    load_number += 1
-    
+    ue.pauserealuseremulate()
+
     # 404
     if len(driver.find_elements_by_class_name('error__title')) != 0:
         # общество может быть объеденено с городом
@@ -318,9 +348,7 @@ def check_for_news(inp_df):
         driver.get(url)
         
         # эмулируем задержки пользователя
-        pauserealuseremulate(load_number, last_load)
-        last_load = time.time()
-        load_number += 1
+        ue.pauserealuseremulate()
     
         # документ вне категории и rbcfreenews
         if len(driver.find_elements_by_class_name('error__title')) != 0:
@@ -332,19 +360,32 @@ def check_for_news(inp_df):
     
     return category
 
-load_number = 0
-last_load = time.time()
 
-driver = webdriver.Firefox(executable_path = "C:\\WebDrivers\\bin\\geckodriver")
-tmp = df_train.loc[5000:, ['document_id', 'publish_date', 'category']].progress_apply(get_article_data, axis = 1)load_number = 0
-last_load = time.time()
+# для сохранения статей следует откомментировать и выполнить 2 нижележащих блока
+# на ubuntu 22 есть проблеммы с Firefox и wewbdriver, так что добавлен chrome
+#driver = webdriver.Firefox(executable_path = "C:\\WebDrivers\\bin\\geckodriver")
+#driver = webdriver.Firefox(executable_path = '/usr/local/bin/geckodriver')
+#driver = webdriver.Firefox(executable_path=GeckoDriverManager().install())
 
-driver = webdriver.Firefox(executable_path = "C:\\WebDrivers\\bin\\geckodriver")
+driver = webdriver.Chrome(ChromeDriverManager().install())
+
+tmp = df_train.loc[:, ['document_id', 'publish_date', 'category']].progress_apply(get_article_data, axis = 1)
+#tmp = df_train.loc[5000:, ['document_id', 'publish_date', 'category']].progress_apply(get_article_data, axis = 1)# на ubuntu 22 есть проблеммы с Firefox и wewbdriver, так что добавлен chrome
+#driver = webdriver.Firefox(executable_path = "C:\\WebDrivers\\bin\\geckodriver")
+#driver = webdriver.Firefox(executable_path = '/usr/local/bin/geckodriver')
+#driver = webdriver.Firefox(executable_path=GeckoDriverManager().install())
+
+driver = webdriver.Chrome(ChromeDriverManager().install())
 tmp = df_test.loc[:, ['document_id', 'publish_date', 'category']].progress_apply(get_article_data, axis = 1)
-print(sum(tmp))load_number = 0
-last_load = time.time()
+#tmp = df_test.loc[2000:, ['document_id', 'publish_date', 'category']].progress_apply(get_article_data, axis = 1)
+print(sum(tmp))
+# проверка на категорию (не участвует в финальном решении)
+# на ubuntu 22 есть проблеммы с Firefox и wewbdriver, так что добавлен chrome
+#driver = webdriver.Firefox(executable_path = "C:\\WebDrivers\\bin\\geckodriver")
+#driver = webdriver.Firefox(executable_path = '/usr/local/bin/geckodriver')
+#driver = webdriver.Firefox(executable_path=GeckoDriverManager().install())
 
-driver = webdriver.Firefox(executable_path = "C:\\WebDrivers\\bin\\geckodriver")
+driver = webdriver.Chrome(ChromeDriverManager().install())
 df_train['link_part'] = df_train.loc[:, ['document_id', 'publish_date', 'category']].progress_apply(check_for_news, axis = 1)
 
 df_train.to_csv(os.path.join(DIR_DATA, 'train_link.csv'), index = False)
@@ -360,33 +401,26 @@ df_train.to_csv(os.path.join(DIR_DATA, 'train_link.csv'), index = False)
 
 
 
-# In[ ]:
+# # Извлекаем признаки из сохраненный статей
+
+# In[12]:
 
 
-
-
-# обычная статья
-#tst_page = '624ac09c9a7947db3d80c98e.html'
-tst_page = '624ac09c9a7947db3d80c98eIDE7mtH4RBqGn-8MXfGffQ.html'
-
-# статья с многго фото
-#623326679a794756b8f2a9689gvGuGVAQdSks_mvJUPH0g
-#https://www.rbc.ru/photoreport/26/03/2022/623326679a794756b8f2a968
-#tst_page = '623326679a794756b8f2a9689gvGuGVAQdSks_mvJUPH0g.html'pages = [el for el in os.listdir(os.path.join(DIR_DATA, 'pages')) if el.endswith('.html')]
-doc_id = [el[:-5] for el in pages]
-
-rbk_data = pd.DataFrame(columns = ['document_id', 'true_title', 'text_overview', 'text', 'true_category'])
-rbk_data['document_id'] = doc_id
-# In[11]:
-
-
-#(page_data.text, features="lxml") # features="lxml" чтобы не было warning
-
-
-# In[13]:
-
-
-def get_article_info(inp_id: str):
+def get_article_info(inp_id: str) -> Tuple[str, str, int, str, int, int, str]:
+    """Извлечение признаков из сохраненных статей
+    
+    args
+        inp_id - id статьи (имя под которым она сохранена)
+    return
+        tuple
+           str - категория статьи, полученная со страницы статьи
+           str - заголовок статьи (без лишних символов как в оригинальном датасете)
+           int - количество картинок в статье
+           str - текст обзора статьи
+           int - длина текста в словах
+           int - наличие 2х статей на одной странице (скрол)
+           str - текст статьи
+    """
     
     with open(os.path.join(DIR_DATA, 'pages', f'{inp_id}.html'), 'r', encoding="utf-8") as page:
         page_data = page.read()
@@ -398,10 +432,6 @@ def get_article_info(inp_id: str):
     #if len(tmp_group) != 1:
     if len(tmp_group) == 0:
         print(f'{inp_id} something went wrong. header info block {len(tmp_group)}')
-        #if len(tmp_group) > 1:
-        #    for el in range(len(tmp_group)):
-        #        print(tmp_group[el])
-        #raise
     else:
         if len(tmp_group) > 1:
             two_articles = 1
@@ -416,23 +446,14 @@ def get_article_info(inp_id: str):
     true_category = true_category[0].text
 
 
-    #new_views = tmp_group.find_all('span', attrs=  {'class': 'article__header__counter js-insert-views-count'})
-    #if len(new_views) != 1:
-    #    print(f'something went wrong. new_views {len(new_views)}')
-    #new_views = new_views[0].text
-
     # article header
     tmp_group = soup.find_all('div', attrs={'class': 'article__header__title'})
     if len(tmp_group) == 0:
         print(f'{inp_id} something went wrong. article header {len(tmp_group)}')
-        # raise
     else:
-        #if len(tmp_group) > 1:
-        #    snd_header
         tmp_group = tmp_group[0]
 
 
-    #true_title = tmp_group.find_all('div', attrs = {'class': 'article__header__title'})
     true_title = tmp_group.find_all('h1', attrs = {'class': 'article__header__title-in js-slide-title'})
     if len(true_title) != 1:
         true_title = tmp_group.find_all('h1', attrs = {'class': 'article__header__title-in js-slide-title article__header__title-in_relative'})
@@ -445,16 +466,11 @@ def get_article_info(inp_id: str):
     tmp_group = soup.find_all('div', attrs={'class': 'article__text article__text_free'})
     if len(tmp_group) == 0:
         print(f'{inp_id} something went wrong. article text {len(tmp_group)}')
-        # raise
     else:
-        #if len(tmp_group) > 1:
-           # snd_text = 
         tmp_group = tmp_group[0]
 
     overview = tmp_group.find_all('div', attrs={'class': 'article__text__overview'})
     if len(overview) == 0:
-        #print(f'{inp_id} something went wrong. overview {len(overview)}')
-        #print(overview, true_category, true_title)
         # rbcfreenews can be without overview
         overview = ''
     else:
@@ -472,134 +488,105 @@ def get_article_info(inp_id: str):
     #   print(f'something went wrong. article images {len(tmp_imgs)}')
     tmp_imgs = len(tmp_imgs)
 
-
-
-    #print(true_category, true_title, tmp_imgs, '\n')
-    #print(overview, '\n')
-    #print(text)
-    #print(text[0].text)
     return (true_category, true_title, tmp_imgs, overview, len(text.split()), two_articles, text) #snd_header, snd_text
-
-Фоторепортаж, Фотогалерея, Главное за день, ЧЭЗ, видео, прямая трансляция
-# In[14]:
-
-
-#df_train[df_train.document_id == '626e564d9a79471a3cd5de65ZM028L7kQ1mVIZAB30bTEA'].title.values
-df_test[df_test.document_id == '620a7cbf9a79471a9c6ace46aMuqupFlTxSsa5P6zHzaEQ'].title.values
-
-
-# In[15]:
-
-
-df_train[df_train.document_id == '6210c3939a7947e58a257424iqcwqgm9QXShvP0aU1iVQQ']
-
-
-# In[16]:
-
-
-#620d1f0c9a794724696a95e7igKOAeqwSo6yt6MHdm1JNA something went wrong. text
-#6210c3939a7947e58a257424iqcwqgm9QXShvP0aU1iVQQ something went wrong. text
-#6253d6f59a7947a4e4819c4eXWVPJk6OTUOpRafSX6B9lQ something went wrong. text
-#6278ac619a79475802c0682aE2s6qP24SsCW5dkYJMTCkA something went wrong. text
-#61f954049a79479310c59dcf10GpiD-VRHCC631Hkl2Y4Q something went wrong. text
-#61fd4d109a794786c8d4dc59COhaOYZzT8qrDBW6plnsDw something went wrong. text
-#62487fc99a7947476b4c938bcZ5KFPtbQF6EmK9oG7vWMA something went wrong. text
-#626459ea9a79477bae9c49313bq0StmMT2uyeuDZmZKmyA something went wrong. text
-#626e36de9a794710fdef04c1-SCC98EoT7u11HsvVQ7rIQ something went wrong. text
-#623b031f9a79474a28a2ce99AL-9lSRYR46n0_5tw7Bd0A something went wrong. text
-#624fdb999a79471adecb2b79t0GMIFtZQv-nadA-xJiaYg something went wrong. text
-#61fbfa689a79470784c13d75W4OgaC-ySTiD34lTz6Sj9g something went wrong. text
-#626e564d9a79471a3cd5de65ZM028L7kQ1mVIZAB30bTEA something went wrong. text
-
-
-
-# 620fef1c9a7947b2de6c18f6rwBF3WoeQbm1jgCkN6cGAQ something went wrong. text
-# 620e76c79a794723bf70e50bSoTq5ec2Raq3SK7ZVq8WcQ something went wrong. text
-# 628201039a7947e9fde98653Qc5leGRRTO2feOAlfm5BwA something went wrong. text
-# 620a7cbf9a79471a9c6ace46aMuqupFlTxSsa5P6zHzaEQ something went wrong. text
-
-
-# In[ ]:
-
-
-
-
-
-# In[17]:
-
-
-df_train['tmp'] = df_train.document_id.progress_apply(get_article_info)
-df_test['tmp'] = df_test.document_id.progress_apply(get_article_info)
-
-
-# In[18]:
-
-
-#(true_category, true_title, tmp_imgs, overview, len(text.split()), two_articles, )
 
 
 # In[19]:
 
 
-df_train['true_category'] = df_train.tmp.apply(lambda x: x[0])
-df_train['true_title'] = df_train.tmp.apply(lambda x: x[1])
-df_train['nimgs'] = df_train.tmp.apply(lambda x: x[2])
-df_train['overview'] = df_train.tmp.apply(lambda x: x[3])
-df_train['text_len'] = df_train.tmp.apply(lambda x: x[4])
-df_train['two_articles'] = df_train.tmp.apply(lambda x: x[5])
-
-
-df_test['true_category'] = df_test.tmp.apply(lambda x: x[0])
-df_test['true_title'] = df_test.tmp.apply(lambda x: x[1])
-df_test['nimgs'] = df_test.tmp.apply(lambda x: x[2])
-df_test['overview'] = df_test.tmp.apply(lambda x: x[3])
-df_test['text_len'] = df_test.tmp.apply(lambda x: x[4])
-df_test['two_articles'] = df_test.tmp.apply(lambda x: x[5])
-
-
-df_train.drop(['tmp'], axis = 1, inplace = True)
-df_test.drop(['tmp'], axis = 1, inplace = True)
-
-def decode_parsing(inp_df: pd.DataFrame) -> pd.DataFrame:
+#------ если используется ray, то декоратор должен быть откомменирован
+#------ при использовании multiprocessing декоратор должен быть закомменитирован
+@ray.remote
+def parallelize_get_article_info(inp_df: pd.DataFrame) -> pd.DataFrame:
+    """Подфункция для !параллельного! вычисления признаков на основании страницы статьи
     
-    inp_df['true_category'] = inp_df.tmp.apply(lambda x: x[0])
-    inp_df['true_title'] = inp_df.tmp.apply(lambda x: x[1])
-    inp_df['nimgs'] = inp_df.tmp.apply(lambda x: x[2])
-    inp_df['overview'] = inp_df.tmp.apply(lambda x: x[3])
-    inp_df['text_len'] = inp_df.tmp.apply(lambda x: x[4])
-    inp_df['two_articles'] = inp_df.tmp.apply(lambda x: x[5])
-    
-    inp_df.drop(['tmp'], axis = 1, inplace = True)
+    args
+        inp_df - часть основного датасета для которого небходимо вычислить
+                 признаки на основаниистраницы статьи
+        
+    return
+        DataFrame, дополненный признаком на основании страницы статьи
+    """
+    inp_df['tmp'] = inp_df.document_id.apply(get_article_info)
     
     return inp_df
-# In[20]:
 
 
-#df_train.head(5)
-
-print('before ', df_train.shape, df_test.shape)
-df_train = decode_parsing(df_train)
-df_test = decode_parsing(df_test)
-print('after  ', df_train.shape, df_test.shape)
-# In[21]:
+# In[14]:
 
 
-#df_train[(df_train.true_title.apply(lambda x: x.endswith('COVID')))]['true_title'].values
-#df_train[(df_train.true_title.apply(lambda x: 'телеканале РБК' in x))]['true_title'].values
+def make_article_features_mp(inp_df: pd.DataFrame, use_cpu: int) -> pd.DataFrame:
+    """Функция для вычисления признаков на основании страницы статьи
+    
+    args
+        inp_df  - DataFrame с document_id? который необходимо дополнить признаками 
+                  на основании страницы статьи
+        use_cpu - количество процессоров для использвания при параллельном вычислении
+        
+    return
+        DataFrame, дополненный признаками на основании страницы статьи
+    """
+    # последовательно разбиваем dataframe на части
+    split_dfs = np.array_split(inp_df, use_cpu)
+
+    
+    
+    # вычисляем параллельно
+    
+    # ------ начало блока, если используется multiprocessing
+    #mppool = mp.Pool(processes = use_cpu)
+    #pool_results = mppool.map(parallelize_get_article_info, split_dfs)
+    #ppool.close()
+    #ppool.join()
+    # ------ конец блока, если используется multiprocessing
+
+    
+    
+    # ------ начало блока, если используется ray
+    pool_results = [0]*use_cpu
+    for el in range(use_cpu):
+        pool_results[el] = parallelize_get_article_info.remote(split_dfs[el])
+    pool_results = ray.get(pool_results)
+    # ------ конец блока, если используется ray
+    
+    # соединяем части результата
+    parts = pd.concat(pool_results, axis=0)
+
+    # выделяем признаки из tuple (можно через to_list)
+    parts['true_category'] = parts.tmp.apply(lambda x: x[0])
+    parts['true_title'] = parts.tmp.apply(lambda x: x[1])
+    parts['nimgs'] = parts.tmp.apply(lambda x: x[2])
+    parts['overview'] = parts.tmp.apply(lambda x: x[3])
+    parts['text_len'] = parts.tmp.apply(lambda x: x[4])
+    parts['two_articles'] = parts.tmp.apply(lambda x: x[5])
+    
+    parts.drop(['tmp'], axis = 1, inplace = True)
+    
+    #print(parts.shape)
+    print('done')
+    
+    return parts
 
 
-# In[22]:
+# In[ ]:
 
 
-# Прямая трансляция, Фоторепортаж, Фотогалерея, Видео, телеканале РБК, Инфографика endswith
 
 
-# In[23]:
+
+# In[16]:
 
 
-#df_train[df_train.text_len == 0].true_title.values
+get_ipython().run_cell_magic('time', '', "ncpu = os.cpu_count() - 1\nprint('ncpu ', ncpu)\n\nprint('before ', df_train.shape, df_test.shape)\ndf_train = make_article_features_mp(df_train, ncpu)\ndf_test  = make_article_features_mp(df_test, ncpu)\nprint('after  ', df_train.shape, df_test.shape)")
 
+время вычисления. mp & ray примерно равны. секунды варьируются 
+train 08:44
+train_mp 2:21
+train_ray 2:16
 
+test  04:11
+test_mp 1:13
+test_ray 1:05
 # In[ ]:
 
 
@@ -612,11 +599,35 @@ print('after  ', df_train.shape, df_test.shape)
 
 
 
-# In[24]:
+# In[ ]:
+
+
+
+
+
+# In[18]:
 
 
 df_train.to_csv(os.path.join(DIR_DATA, 'train_extended.csv'), index = False)
 df_test.to_csv(os.path.join(DIR_DATA, 'test_extended.csv'), index = False)
+
+
+# In[ ]:
+
+
+
+
+
+# In[ ]:
+
+
+ray.shutdown()
+
+
+# In[ ]:
+
+
+print("Notebook Runtime: %0.2f Minutes"%((time.time() - notebookstart)/60))
 
 
 # In[ ]:

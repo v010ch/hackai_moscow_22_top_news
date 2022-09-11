@@ -1,36 +1,37 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[1]:
+# In[ ]:
 
 
 get_ipython().run_line_magic('load_ext', 'watermark')
 
 
-# In[2]:
+# In[ ]:
 
 
 get_ipython().run_line_magic('watermark', '')
 
 
-# In[3]:
+# In[ ]:
 
 
 import time
 notebookstart= time.time()
 
 
-# In[4]:
+# In[ ]:
 
 
 import os
 import pickle as pkl
+from typing import Optional
 
 import numpy as np
 import pandas as pd
 from itertools import product
 
-import category_encoders as ce
+#import category_encoders as ce
 from sklearn import preprocessing
 #from sklearn.model_selection import train_test_split
 
@@ -40,15 +41,15 @@ from tqdm import tqdm
 tqdm.pandas()
 
 
-# In[5]:
+# In[ ]:
 
 
 get_ipython().run_line_magic('watermark', '--iversions')
 
 
-# ## Reproducibility block
+# ## Блок для воспроизводимости результата (при условии созранения версии библиотек)
 
-# In[6]:
+# In[ ]:
 
 
 # seed the RNG for all devices (both CPU and CUDA)
@@ -74,23 +75,20 @@ np.random.seed(62185)
 
 
 
-# In[7]:
+# Переменные
+
+# In[ ]:
 
 
 DIR_DATA  = os.path.join(os.getcwd(), 'data')
 
 
-# In[8]:
+# In[ ]:
 
 
 # ctr для специальных статей по украине
 CTR_UKR = 6.096
 
-
-# энкодеры для кодирования категориальных переменных. 
-
-# но, например, для catboost не требуется такого кодирования, так что оригинальный признак так же останется в датасете,   
-# а в модель будут передоваться признаки только через параметр features.
 
 # In[ ]:
 
@@ -98,7 +96,9 @@ CTR_UKR = 6.096
 
 
 
-# In[9]:
+# # Загрузка данных
+
+# In[ ]:
 
 
 df_train = pd.read_csv(os.path.join(DIR_DATA, 'train_extended.csv'))#, index_col= 0)
@@ -108,7 +108,7 @@ df_train['publish_date'] = pd.to_datetime(df_train['publish_date'])
 df_test['publish_date']  = pd.to_datetime(df_test['publish_date'])
 
 
-# In[10]:
+# In[ ]:
 
 
 df_train.shape, df_test.shape
@@ -124,12 +124,12 @@ df_train.shape, df_test.shape
 # Формат:   
 # {
 # исходный признак/идея: {   
-# только числовые признаки: [ ]   
-# только категориальные признаки: [ ]   
-# признаки, которые могу быть как числовыми так и категориальными: [ ]   
+# num - только числовые признаки: [ ]   
+# cat - только категориальные признаки: [ ]   
+# both- признаки, которые могу быть как числовыми так и категориальными: [ ]   
 # }}
 
-# In[11]:
+# In[ ]:
 
 
 clmns = {'document_id':{'num':  ['nimgs','text_len', ],   
@@ -171,7 +171,7 @@ clmns = {'document_id':{'num':  ['nimgs','text_len', ],
         }
 
 
-# In[12]:
+# In[ ]:
 
 
 print(df_train.columns.values)
@@ -185,25 +185,34 @@ print(df_train.columns.values)
 
 # ## Очистка датасета
 
-# этих категорий нет в тесте, а в трейне на них приходится всего 3 записи. они явно лишние.
-# 
-# уберем статьи раньше минимальной даты в тесте. для начала так, дальше можно будет поиграться.
-
-# In[13]:
+# In[ ]:
 
 
 def clear_data(inp_df: pd.DataFrame, min_time: pd.Timestamp) -> pd.DataFrame:
+    """Очистка датафрейма от выбросов и т.п.
     
+    args
+        inp_df   - DataFrame, который необходимо очистить
+        min_time - дата, все статьи раньше которой будут исключены из DataFrame
+        
+    return
+        очищенный DataFrame
+    """
+    
+    # этих категорий нет в тесте, а в трейне на них приходится всего 3 записи. они явно лишние.
     exclude_category = {'5e54e2089a7947f63a801742', '552e430f9a79475dd957f8b3', '5e54e22a9a7947f560081ea2' }
     inp_df = inp_df.query('category not in @exclude_category')
     print(f'shape after clean category {inp_df.shape}')
     
+    # уберем статьи раньше минимальной даты в тесте. для начала так, дальше можно будет поиграться.
     inp_df = inp_df[inp_df.publish_date >= min_time]
     print(f'shape after min time {inp_df.shape}')
     
+    # уберем статьи по Укр с явно коснтантрыми значениями
     inp_df = inp_df.query('ctr != 6.096')
     print(f'shape after ctr {inp_df.shape}')
     
+    # no comments
     if 'full_reads_percent' in inp_df.columns:
         inp_df = inp_df.query('full_reads_percent < 100')
         print(f'shape after frp time {inp_df.shape}')
@@ -211,7 +220,7 @@ def clear_data(inp_df: pd.DataFrame, min_time: pd.Timestamp) -> pd.DataFrame:
     return inp_df
 
 
-# In[14]:
+# In[ ]:
 
 
 min_test_time = pd.Timestamp('2022-01-01')
@@ -233,10 +242,18 @@ df_train = clear_data(df_train, min_test_time)
 
 # ## title
 
-# In[15]:
+# In[ ]:
 
 
-def add_title_features(inp_df):
+def add_title_features(inp_df: pd.DataFrame) -> pd.DataFrame:
+    """Добавление признаков на основании заголовка статьи
+    
+    args
+        inp_df - DataFrame в который необходимо добавить признаки
+        
+    return
+        DataFrame с добавленными признаками
+    """
     
     # Прямая трансляция, Фоторепортаж, Фотогалерея, Видео, телеканале РБК, Инфографика endswith
     
@@ -250,27 +267,27 @@ def add_title_features(inp_df):
     inp_df.overview.fillna('', inplace = True)
     inp_df['interview'] = inp_df.overview.apply(lambda x: 1 if 'интервью РБК' in x else 0)
     
-    
+    # добавляем признаки в список признаков
     if 'video' not in clmns['title']['both']:
         clmns['title']['both'].extend(['ph_report', 'ph_gallery', 'tv_prog', 'online', 'video', 'infogr', 'interview'])
         
     return inp_df
 
 
-# In[16]:
+# In[ ]:
 
 
 df_train = add_title_features(df_train)
 df_test = add_title_features(df_test)
 
 
-# In[17]:
+# In[ ]:
 
 
 df_train.ph_report.sum(), df_train.ph_gallery.sum(), df_train.tv_prog.sum(), df_train.online.sum(), df_train.video.sum(), df_train.infogr.sum()
 
 
-# In[18]:
+# In[ ]:
 
 
 df_test.ph_report.sum(), df_test.ph_gallery.sum(), df_test.tv_prog.sum(), df_test.online.sum(), df_test.video.sum(), df_test.infogr.sum()
@@ -302,9 +319,10 @@ df_test.ph_report.sum(), df_test.ph_gallery.sum(), df_test.tv_prog.sum(), df_tes
 
 # # publish date
 
-# In[19]:
+# In[ ]:
 
 
+# выходные влияют на целевые переменные
 holidays = {pd.Timestamp('2022-01-01').date(), pd.Timestamp('2022-01-02').date(), pd.Timestamp('2022-01-03').date(),
             pd.Timestamp('2022-01-04').date(), pd.Timestamp('2022-01-05').date(), pd.Timestamp('2022-01-06').date(),  #NY
             pd.Timestamp('2022-01-07').date(), pd.Timestamp('2022-01-08').date(), pd.Timestamp('2022-01-08').date(),
@@ -316,6 +334,7 @@ holidays = {pd.Timestamp('2022-01-01').date(), pd.Timestamp('2022-01-02').date()
             pd.Timestamp('2022-11-04').date()
            }
 
+# день до и день после выходных так же влияют на целевые переменные
 day_before_holiday = {pd.Timestamp('2021-12-31').date(), pd.Timestamp('2022-02-22').date(), pd.Timestamp('2022-03-05').date(),
                       pd.Timestamp('2022-02-23').date(),
                       pd.Timestamp('2022-04-29').date(), pd.Timestamp('2022-05-04').date(), 
@@ -329,16 +348,24 @@ day_after_holiday = {pd.Timestamp('2022-01-10').date(), pd.Timestamp('2022-02-24
                     }
 
 
-# In[20]:
+# In[ ]:
 
 
 border = pd.Timestamp('2022-04-08').date()
 
 
-# In[21]:
+# In[ ]:
 
 
 def publish_date_features(inp_df: pd.DataFrame) -> pd.DataFrame:
+    """Добавление признаков на основании даты публикации статьи
+    
+    args
+        inp_df - DataFrame в который необходимо добавить признаки
+        
+    return
+        DataFrame с добавленными признаками
+    """
     
     inp_df['m_d'] = inp_df['publish_date'].dt.date
 
@@ -357,7 +384,7 @@ def publish_date_features(inp_df: pd.DataFrame) -> pd.DataFrame:
     
     inp_df['distrib_brdr'] = inp_df.m_d.apply(lambda x: 1 if x < border else 0)
     
-    
+    # добавляем признаки в список признаков
     if 'hour' not in clmns['publish_date']['both']:
         clmns['publish_date']['both'].extend(['hour', 'dow', 'day', 'mounth', 'hour_peak'])#, 'distrib_brdr'])
         
@@ -367,7 +394,7 @@ def publish_date_features(inp_df: pd.DataFrame) -> pd.DataFrame:
     return inp_df
 
 
-# In[22]:
+# In[ ]:
 
 
 print('before ', df_train.shape, df_test.shape)
@@ -376,7 +403,7 @@ df_test  = publish_date_features(df_test)
 print('after  ', df_train.shape, df_test.shape)
 
 
-# In[23]:
+# In[ ]:
 
 
 print(sum(df_train.holiday), sum(df_train.day_before_holiday), sum(df_train.day_after_holiday), )
@@ -389,7 +416,9 @@ print(sum(df_test.holiday), sum(df_test.day_before_holiday), sum(df_test.day_aft
 
 
 
-# In[24]:
+# собираем статистики и добавляем к датасетам
+
+# In[ ]:
 
 
 hour_cols = ['hour',
@@ -489,11 +518,20 @@ day_after_holiday_stats_end.columns = day_after_holiday_cols
 
 
 
-# In[25]:
+# In[ ]:
 
 
-def add_daily_stats_date(inp_df:pd.DataFrame, inp_feature, inp_stats_start, inp_stats_end) -> pd.DataFrame:
+def add_daily_stats_date(inp_df: pd.DataFrame, inp_feature:str, inp_stats_start: pd.DataFrame, inp_stats_end: pd.DataFrame) -> pd.DataFrame:
+    """Добавление признаков на основании статистик по указанному признаку
     
+    args
+        inp_df      - DataFrame в который необходимо добавить признаки
+        inp_feature - имя признака (на основе publish_date)
+        inp_stats_start - статистики для выборки до 08-04-2022
+        inp_stats_утв   - статистики для выборки после 08-04-2022
+    return
+        DataFrame с добавленными признаками
+    """
     
     col_x = [el + '_x' for el in inp_stats_start.columns[1:]]
     col_y = [el + '_y' for el in inp_stats_start.columns[1:]]
@@ -513,6 +551,7 @@ def add_daily_stats_date(inp_df:pd.DataFrame, inp_feature, inp_stats_start, inp_
     
     ret_df = inp_df.merge(tmp, on = ['document_id'], how = 'left', validate = 'one_to_one')
     
+    # добавляем признаки в список признаков
     if inp_stats_start.columns[3] not in clmns['publish_date']['num']:
         clmns['publish_date']['num'].extend(inp_stats_start.columns[1:])
     
@@ -525,7 +564,7 @@ def add_daily_stats_date(inp_df:pd.DataFrame, inp_feature, inp_stats_start, inp_
 
 
 
-# In[26]:
+# In[ ]:
 
 
 print('before ', df_train.shape, df_test.shape, 'add ', hour_stats_start.shape[1])
@@ -534,7 +573,7 @@ df_test  = add_daily_stats_date(df_test, 'hour', hour_stats_start, hour_stats_en
 print('before ', df_train.shape, df_test.shape, 'add ', hour_stats_start.shape[1])
 
 
-# In[27]:
+# In[ ]:
 
 
 print('before ', df_train.shape, df_test.shape, 'add ', mounth_stats_start.shape[1])
@@ -543,7 +582,7 @@ df_test  = add_daily_stats_date(df_test, 'mounth', mounth_stats_start, mounth_st
 print('before ', df_train.shape, df_test.shape, 'add ', mounth_stats_start.shape[1])
 
 
-# In[28]:
+# In[ ]:
 
 
 print('before ', df_train.shape, df_test.shape, 'add ', dow_stats_start.shape[1])
@@ -552,7 +591,7 @@ df_test  = add_daily_stats_date(df_test, 'dow', dow_stats_start, dow_stats_end)
 print('before ', df_train.shape, df_test.shape, 'add ', dow_stats_start.shape[1])
 
 
-# In[29]:
+# In[ ]:
 
 
 print('before ', df_train.shape, df_test.shape, 'add ', holiday_stats_start.shape[1])
@@ -561,7 +600,7 @@ df_test  = add_daily_stats_date(df_test, 'holiday', holiday_stats_start, holiday
 print('before ', df_train.shape, df_test.shape, 'add ', holiday_stats_start.shape[1])
 
 
-# In[30]:
+# In[ ]:
 
 
 print('before ', df_train.shape, df_test.shape, 'add ', day_before_holiday_stats_start.shape[1])
@@ -570,7 +609,7 @@ df_test  = add_daily_stats_date(df_test, 'day_before_holiday', day_before_holida
 print('before ', df_train.shape, df_test.shape, 'add ', day_before_holiday_stats_start.shape[1])
 
 
-# In[31]:
+# In[ ]:
 
 
 print('before ', df_train.shape, df_test.shape, 'add ', day_after_holiday_stats_start.shape[1])
@@ -587,16 +626,25 @@ print('before ', df_train.shape, df_test.shape, 'add ', day_after_holiday_stats_
 
 # Рассчитаем дневные статистики + лаги за 7 дней + разница за 7 дней + гаусиана-тренд
 
-# In[32]:
+# In[ ]:
 
 
 df_train.sort_values(by='m_d').m_d.diff().value_counts()
 
 
-# In[33]:
+# In[ ]:
 
 
-def create_daily_stats(inp_df: pd.DataFrame, max_lags: int = 7) -> pd.DataFrame:
+def create_daily_stats(inp_df: pd.DataFrame, max_lags: Optional[int] = 7) -> pd.DataFrame:
+    """Расчет дневных статистик
+    
+    args
+        inp_df   - DataFrame по которому считаются статистики
+        max_lags - (опционально, 7) - за какое количество дней собирать лаги
+        
+    return
+        DataFrame с требуемыми статистиками
+    """
     
     ret_df = inp_df.sort_values(by='m_d').groupby('m_d')[['m_d', 'views', 'depth', 'full_reads_percent']].agg(['min', 'max', 'mean', 'std']).copy()
     new_cols = ['views_min', 'views_max', 'views_mean', 'views_std',
@@ -637,15 +685,16 @@ def create_daily_stats(inp_df: pd.DataFrame, max_lags: int = 7) -> pd.DataFrame:
         #????fillna
         #ret_df[f'{col}_lag{lag+1}'].fillna('mean', inplace = True)
     
-
     
     return ret_df
 
+# если собирать статистики по всему датасету без разделения по дате 08-04-2022
 daily_stats = create_daily_stats(df_train)
 daily_stats.to_csv(os.path.join(DIR_DATA, 'dayly_stats.csv'), index = False)
-# In[34]:
+# In[ ]:
 
 
+# если собирать статистики с разделением по дате 08-04-2022
 daily_stats_start = create_daily_stats(df_train[df_train.distrib_brdr == 1])
 daily_stats_start.to_csv(os.path.join(DIR_DATA, 'daily_stats_start.csv'), index = False)
 
@@ -664,7 +713,7 @@ for el in daily_stats_start.columns:
         print(el, sum(daily_stats_end[el].isna()))
 
 
-# In[35]:
+# In[ ]:
 
 
 #daily_stats
@@ -676,7 +725,7 @@ for el in daily_stats_start.columns:
 
 
 
-# In[36]:
+# In[ ]:
 
 
 daily_stats_start.columns[:]
@@ -684,11 +733,18 @@ daily_stats_start.columns[:]
 
 # Добавим их к датасетам
 
-# In[37]:
+# In[ ]:
 
 
 def add_daily_stats(inp_df:pd.DataFrame) -> pd.DataFrame:
+    """Добавление признаков на основании дневных статистик
     
+    args
+        inp_df - DataFrame в который необходимо добавить признаки
+        
+    return
+        DataFrame с добавленными признаками
+    """
     
     col_x = [el + '_x' for el in daily_stats_start.columns[1:]]
     col_y = [el + '_y' for el in daily_stats_start.columns[1:]]
@@ -709,27 +765,14 @@ def add_daily_stats(inp_df:pd.DataFrame) -> pd.DataFrame:
     
     ret_df = inp_df.merge(tmp, on = ['document_id'], how = 'left', validate = 'one_to_one')
     
+    # добавляем признаки в список признаков
     if daily_stats_start.columns[3] not in clmns['publish_date']['num']:
         clmns['publish_date']['num'].extend(daily_stats_start.columns[1:])
     
     return ret_df
 
 
-# In[38]:
-
-
-def add_daily_stats___(inp_df:pd.DataFrame) -> pd.DataFrame:
-    
-    #ret_df = inp_df.merge(daily_stats, on = 'm_d', validate = 'many_to_one')
-    ret_df = inp_df.merge(daily_stats, on = 'm_d', how = 'left', validate = 'many_to_one')
-    
-    if 'views_min' not in clmns['publish_date']['num']:
-        clmns['publish_date']['num'].extend(daily_stats.columns[1:])
-    
-    return ret_df
-
-
-# In[39]:
+# In[ ]:
 
 
 print('before ', df_train.shape, df_test.shape, 'add ', daily_stats_start.shape[1])
@@ -740,7 +783,7 @@ print('after  ', df_train.shape, df_test.shape)
 
 # Проверим на пропуски в тесте
 
-# In[40]:
+# In[ ]:
 
 
 df_test[['views_min', 'views_max', 'views_mean', 'views_std',
@@ -769,66 +812,9 @@ df_test[['views_min', 'views_max', 'views_mean', 'views_std',
 
 
 
-# In[ ]:
-
-
-
-
-
-# In[ ]:
-
-
-
-
-
-# # title 2
-%%time
-tmp = df_train[['m_d', 'true_title']]
-tmp = pd.concat([tmp, df_test[['m_d', 'true_title']]], 
-                ignore_index = True, axis = 0)
-
-tmp['covid']     = tmp.true_title.apply(lambda x: 1 if 'COVID' in x else 0)
-tmp['ukr']       = tmp.true_title.apply(lambda x: 1 if 'Укр' in x else 0)
-tmp['sanctions'] = tmp.true_title.apply(lambda x: 1 if 'анкц' in x else 0)
-
-#tmp.groupby('m_d')[['covid', 'sanctions']].agg('size')
-
-df_train = df_train.merge(tmp.groupby('m_d')[['covid']].agg('size').rename('covid'),
-                          on = ['m_d'], how = 'left', validate = 'many_to_one'
-                         )
-df_tets = df_test.merge(tmp.groupby('m_d')[['covid']].agg('size').rename('covid'),
-                          on = ['m_d'], how = 'left', validate = 'many_to_one'
-                         )
-
-df_train = df_train.merge(tmp.groupby('m_d')[['ukr']].agg('size').rename('ukr'),
-                          on = ['m_d'], how = 'left', validate = 'many_to_one'
-                         )
-df_test = df_test.merge(tmp.groupby('m_d')[['ukr']].agg('size').rename('ukr'),
-                          on = ['m_d'], how = 'left', validate = 'many_to_one'
-                         )
-
-
-df_train = df_train.merge(tmp.groupby('m_d')[['sanctions']].agg('size').rename('sanctions'),
-                          on = ['m_d'], how = 'left', validate = 'many_to_one'
-                         )
-df_test = df_test.merge(tmp.groupby('m_d')[['sanctions']].agg('size').rename('sanctions'),
-                          on = ['m_d'], how = 'left', validate = 'many_to_one'
-                         )
-
-clmns['title']['num'].extend(['sanctions', 'ukr', 'covid'])df_train.shape, df_test.shape
-# In[ ]:
-
-
-
-
-
-# In[ ]:
-
-
-
-
-
 # ## session
+
+# информацию из сессий не использую
 
 # In[ ]:
 
@@ -838,19 +824,24 @@ clmns['title']['num'].extend(['sanctions', 'ukr', 'covid'])df_train.shape, df_te
 
 # ## authors
 
-# Авторы считываются как строки, а не как массив строк. исправим.
-
-# In[41]:
+# In[ ]:
 
 
-def prep_authors(inp_df): 
-
+def prep_authors(inp_df: pd.DataFrame) -> pd.DataFrame: 
+    """Добавление признаков на основании авторов статьи
+    
+    args
+        inp_df - DataFrame в который необходимо добавить признаки
+        
+    return
+        DataFrame с добавленными признаками
+    """
     
     inp_df["authors_int"] = inp_df.authors.astype('category')
     inp_df["authors_int"] = inp_df.authors_int.cat.codes
     inp_df["authors_int"] = inp_df.authors_int.astype('int')
     
-    
+    # Авторы считываются как строки, а не как массив строк. исправим.
     inp_df['authors'] = inp_df.authors.apply(lambda x: literal_eval(x))
     inp_df['authors'] = inp_df.authors.apply(lambda x: x if len(x) > 0 else ['without_author'])
     
@@ -858,6 +849,7 @@ def prep_authors(inp_df):
     inp_df['Nauthors_2'] = inp_df.Nauthors.apply(lambda x: 1 / (x+1)**2)
     inp_df['Nauthors_3'] = inp_df.Nauthors.apply(lambda x: -1 / (x+1)**2)
     
+    # добавляем признаки в список признаков
     if 'authors_int' not in clmns['authors']['num']:
         clmns['authors']['num'].extend(['authors_int'])
     
@@ -866,14 +858,8 @@ def prep_authors(inp_df):
     
     return inp_df
 
-df_train['authors']  = df_train.authors.apply(lambda x: literal_eval(x))
-df_test['authors']   = df_test.authors.apply( lambda x: literal_eval(x))
 
-# пустое поле автора заменим на значение, что автор не указан
-df_train['authors'] = df_train['authors'].apply(lambda x: x if len(x) > 0 else ['without_author'])
-df_test['authors']  = df_test['authors'].apply( lambda x: x if len(x) > 0 else ['without_author'])df_train['Nauthors'] = df_train.authors.apply(lambda x: len(x))
-df_test['Nauthors']  = df_test.authors.apply(lambda x: len(x))clmns['authors']['num'].extend(['Nauthors'])
-# In[42]:
+# In[ ]:
 
 
 print('before ', df_train.shape, df_test.shape)
@@ -890,7 +876,7 @@ print('after  ', df_train.shape, df_test.shape)
 
 # выделяем всех авторов в трейне
 
-# In[43]:
+# In[ ]:
 
 
 all_authors = set()
@@ -907,7 +893,7 @@ for el in df_train.authors.values:
 
 # проверяем на наличия авторов из теста
 
-# In[44]:
+# In[ ]:
 
 
 test_authors = set()
@@ -937,7 +923,7 @@ for el in test_authors:
 
 # Все статьи автора (с учетом совместных)
 
-# In[45]:
+# In[ ]:
 
 
 auth_doc_id = {el: [] for el in all_authors}
@@ -952,7 +938,7 @@ with open(os.path.join(DIR_DATA, 'authors_all.pkl'), 'wb') as pkl_file:
 
 # Статьи только автора (в одиночку)(пока не применяется)
 
-# In[46]:
+# In[ ]:
 
 
 auth_doc_id_alone = {el: [] for el in all_authors}
@@ -973,7 +959,7 @@ with open(os.path.join(DIR_DATA, 'authors_alone.pkl'), 'wb') as pkl_file:
 
 # Соберем статистику по авторам (с учетом совместных)
 
-# In[47]:
+# In[ ]:
 
 
 author_columns = ['author', 'author_size', 'v_auth_min', 'v_auth_max', 'v_auth_mean', 'v_auth_std', 'd_auth_min',
@@ -989,7 +975,7 @@ author_group_columns = ['author_size',
                    ]
 
 
-# In[48]:
+# In[ ]:
 
 
 df_author = pd.DataFrame(columns = author_columns)
@@ -1024,13 +1010,13 @@ df_author.loc['mean2', ['author']] = '57f766ae9a79479bfcfa0133'
 df_train.drop(['cur_author'], inplace = True, axis = 1)
 
 
-# In[49]:
+# In[ ]:
 
 
 df_author.to_csv(os.path.join(DIR_DATA, 'author_together.csv'), index = False)
 
 
-# In[50]:
+# In[ ]:
 
 
 #df_author.tail()
@@ -1044,10 +1030,18 @@ df_author.to_csv(os.path.join(DIR_DATA, 'author_together.csv'), index = False)
 
 # Добавляем статистики по авторам в датасеты
 
-# In[51]:
+# In[ ]:
 
 
-def add_author_statistics(inp_df):
+def add_author_statistics(inp_df: pd.DataFrame) -> pd.DataFrame:
+    """Подфункция добавления признаков на основании статистик авторов статьи
+    
+    args
+        inp_df - DataFrame в который необходимо добавить признаки
+        
+    return
+        DataFrame с добавленными признаками
+    """
     
     if len(inp_df[0]) == 0:  # заменяли на without_author так что не может быть
         print(inp_Df)
@@ -1076,20 +1070,20 @@ def add_author_statistics(inp_df):
                           ret_np[10] + tmp.f_auth_mean.values[0],
                           ret_np[11] + tmp.f_auth_std.values[0]
                          ]
-            else: # aouthor in test out from train
+            else: # автор из теста остутствует в трейне
                 #divisor -= 1
                 ret_np = [ret_np[0]  + 0,
                           ret_np[1]  + 0,
                           ret_np[2]  + 0,
-                         ret_np[3]  + 0,
-                         ret_np[4]  + 0,
+                          ret_np[3]  + 0,
+                          ret_np[4]  + 0,
                           ret_np[5]  + 0,
                           ret_np[6]  + 0,
                           ret_np[7]  + 0,
                           ret_np[8]  + 0,
-                         ret_np[9]  + 0,
+                          ret_np[9]  + 0,
                           ret_np[10] + 0,
-                         ret_np[11] + 0
+                          ret_np[11] + 0
                          ]
                 
         #№ пока только среднее
@@ -1110,11 +1104,19 @@ def add_author_statistics(inp_df):
     return ret_np
 
 
-# In[52]:
+# In[ ]:
 
 
-def add_author_features(inp_df):
+def add_author_features(inp_df: pd.DataFrame) -> pd.DataFrame:
+    """Добавление признаков на основании статистик авторов статьи
     
+    args
+        inp_df - DataFrame в который необходимо добавить признаки
+        
+    return
+        DataFrame с добавленными признаками
+    """
+        
     tmp_cols = inp_df.columns
     author_stats = inp_df[['authors']].progress_apply(add_author_statistics, axis = 1)
     inp_df = pd.concat([inp_df, 
@@ -1123,13 +1125,14 @@ def add_author_features(inp_df):
     
     inp_df.columns = list(tmp_cols) + list(author_columns[2:])
     
+    # добавляем признаки в список признаков
     if author_columns[5] not in clmns['authors']['num']:
         clmns['authors']['num'].extend(author_columns[2:]) 
     
     return inp_df
 
 
-# In[53]:
+# In[ ]:
 
 
 # кроме полей author / author_size
@@ -1137,24 +1140,6 @@ print('before', df_train.shape, df_test.shape)
 df_train = add_author_features(df_train)
 df_test  = add_author_features(df_test)
 print('after', df_train.shape, df_test.shape)
-
-
-# In[54]:
-
-
-#clmns['authors']['num'].extend(author_columns[2:])
-
-
-# In[55]:
-
-
-#list(tmp_cols) + list(author_columns[2:])
-
-
-# In[ ]:
-
-
-
 
 
 # In[ ]:
@@ -1177,23 +1162,33 @@ print('after', df_train.shape, df_test.shape)
 
 # ## ctr
 
-# In[56]:
+# In[ ]:
 
 
+# для занчений равных 0 используем среднее
 crt_replace = df_train[df_train.ctr > 0].ctr.mean()
 crt_replace
 
 
-# In[57]:
+# In[ ]:
 
 
-def add_ctr_features(inp_df):
+def add_ctr_features(inp_df: pd.DataFrame) -> pd.DataFrame:
+    """Добавление признаков на основании признака ctr
+    
+    args
+        inp_df - DataFrame в который необходимо добавить признаки
+        
+    return
+        DataFrame с добавленными признаками
+    """
     
     #inp_df['spec_event_1'] = inp_df.ctr.apply(lambda x: 1 if x == 6.096 else 0)
     
     inp_df.ctr.replace(0.0, crt_replace, inplace = True)
     inp_df['ctr_2'] = inp_df.ctr.apply(lambda x: np.sqrt(x))
     
+    # добавляем признаки в список признаков
     #if 'spec_event_1' not in clmns['ctr']['both']:
     #    clmns['ctr']['both'].extend(['spec_event_1']) 
     
@@ -1203,7 +1198,7 @@ def add_ctr_features(inp_df):
     return inp_df
 
 
-# In[58]:
+# In[ ]:
 
 
 print('before ', df_train.shape, df_test.shape)
@@ -1212,7 +1207,7 @@ df_test  = add_ctr_features(df_test)
 print('after  ', df_train.shape, df_test.shape)
 
 
-# In[59]:
+# In[ ]:
 
 
 df_test['spec'] = df_test.ctr.apply(lambda x: 1 if x == CTR_UKR else 0)
@@ -1227,26 +1222,9 @@ df_test['spec'] = df_test.ctr.apply(lambda x: 1 if x == CTR_UKR else 0)
 # In[ ]:
 
 
-
-
-
-# In[60]:
-
-
+# добавляем изначальный признак в список признаков
 if 'ctr' not in clmns['ctr']['num']:
     clmns['ctr']['num'].extend(['ctr']) 
-
-
-# In[ ]:
-
-
-
-
-
-# In[ ]:
-
-
-
 
 
 # In[ ]:
@@ -1271,10 +1249,18 @@ if 'ctr' not in clmns['ctr']['num']:
 
 # Собираем статистики по категориям
 
-# In[61]:
+# In[ ]:
 
 
-def create_daily_stats_by_category(inp_df: pd.DataFrame, max_lags: int = 7) -> pd.DataFrame:
+def create_daily_stats_by_category(inp_df: pd.DataFrame, max_lags: Optional[int] = 7) -> pd.DataFrame:
+    """Добавление признаков на основании признака категории
+       
+    args
+        inp_df   - DataFrame по которому необходимо рассчитать статистики
+        max_lags - (опционально, 7) количество предшествующих дней, для сбора статистики
+    return
+        DataFrame с собранными статистиками
+    """
     
     ret_df = inp_df[['publish_date', 'm_d', 'category', 'views', 'depth', 'full_reads_percent']].copy()
     new_cols = ['cat_views_min', 'cat_views_max', 'cat_views_mean', 'cat_views_std',
@@ -1318,18 +1304,18 @@ def create_daily_stats_by_category(inp_df: pd.DataFrame, max_lags: int = 7) -> p
         #????fillna
         #ret_df[f'{col}_lag{lag+1}'].fillna('mean', inplace = True)
     
-
-        
     return ret_df
 
+# если собирать статистики без разделения по дате 08-04-2022
 if not os.path.exists(os.path.join(DIR_DATA, 'daily_stats_category.csv')):
     daily_stats_category = create_daily_stats_by_category(df_train)
     daily_stats_category.to_csv(os.path.join(DIR_DATA, 'daily_stats_category.csv'), index = False)
 else:
     daily_stats_category = pd.read_csv(os.path.join(DIR_DATA, 'daily_stats_category.csv'))#, index = False)
-# In[62]:
+# In[ ]:
 
 
+# если собирать статистики с разделением по дате 08-04-2022
 daily_stats_cat_start = create_daily_stats_by_category(df_train[df_train.distrib_brdr == 1])
 daily_stats_cat_start.to_csv(os.path.join(DIR_DATA, 'daily_stats_cat_start.csv'), index = False)
 
@@ -1348,7 +1334,7 @@ for el in daily_stats_cat_start.columns:
         print(el, sum(daily_stats_cat_end[el].isna()))
 
 
-# In[63]:
+# In[ ]:
 
 
 #np.std(daily_stats_category.cat_frp_mean)
@@ -1368,18 +1354,25 @@ for el in daily_stats_cat_start.columns:
 
 # Добавляем статистики по категориям в датасеты
 
-# In[64]:
+# In[ ]:
 
 
 #df_train.m_d
 #daily_stats_cat_end.columns
 
 
-# In[65]:
+# In[ ]:
 
 
-def add_daily_stats_category(inp_df:pd.DataFrame) -> pd.DataFrame:
+def add_daily_stats_category(inp_df: pd.DataFrame) -> pd.DataFrame:
+    """Добавление признаков на основании статистик по категориям
     
+    args
+        inp_df - DataFrame в который необходимо добавить признаки
+        
+    return
+        DataFrame с добавленными признаками
+    """
     
     col_x = [el + '_x' for el in daily_stats_cat_start.columns[2:]]
     col_y = [el + '_y' for el in daily_stats_cat_start.columns[2:]]
@@ -1399,14 +1392,11 @@ def add_daily_stats_category(inp_df:pd.DataFrame) -> pd.DataFrame:
     
     ret_df = inp_df.merge(tmp, on = ['document_id'], how = 'left', validate = 'one_to_one')
     
+    # добавляем признаки в список признаков
     if daily_stats_cat_start.columns[3] not in clmns['category']['num']:
         clmns['category']['num'].extend(daily_stats_cat_start.columns[2:])
     
     return ret_df
-
-
-# In[66]:
-
 
 def add_daily_stats_category__(inp_df:pd.DataFrame) -> pd.DataFrame:
     
@@ -1416,9 +1406,7 @@ def add_daily_stats_category__(inp_df:pd.DataFrame) -> pd.DataFrame:
         clmns['category']['num'].extend(daily_stats_category.columns[2:])
     
     return ret_df
-
-
-# In[67]:
+# In[ ]:
 
 
 print('before ', df_train.shape, df_test.shape, 'add ', daily_stats_cat_start.shape, len(daily_stats_cat_start.columns))
@@ -1427,33 +1415,6 @@ df_train = add_daily_stats_category(df_train)
 df_test = add_daily_stats_category(df_test)
 print('after  ', df_train.shape, df_test.shape, )
 
-col_x = [el + '_x' for el in daily_stats_cat_start.columns[2:]]
-col_y = [el + '_y' for el in daily_stats_cat_start.columns[2:]]
-
-tmp = df_train[['document_id', 'category', 'm_d']].merge(daily_stats_cat_start, on = ['category', 'm_d'], how = 'left', validate = 'many_to_one')
-tmp = tmp.merge(daily_stats_cat_end,   on = ['category', 'm_d'], how = 'left', validate = 'many_to_one')
-
-for el in daily_stats_cat_start.columns[2:]:
-    tmp[el] = tmp[f'{el}_x'].fillna(tmp[f'{el}_y'])    
-#tmp[daily_stats_cat_start.columns[2:]] = tmp[col_x].fillna(tmp[col_y])
-
-tmp.drop(col_x, inplace = True, axis = 1)
-tmp.drop(col_y, inplace = True, axis = 1)
-
-for el in daily_stats_cat_start.columns[2:]:
-    if sum(tmp[el].isna()) != 0:
-        print('wtf ', el, ' ',sum(tmp[el].isna()))  
-# In[ ]:
-
-
-
-
-
-# In[68]:
-
-
-#print(' '.join(df_train.columns))
-
 
 # In[ ]:
 
@@ -1467,15 +1428,15 @@ for el in daily_stats_cat_start.columns[2:]:
 
 
 
-# In[69]:
+# In[ ]:
 
 
-#clmns['category']['num'].extend(daily_stats_category.columns[2:])
+
 
 
 # Проверяем, что все данные есть в тесте
 
-# In[70]:
+# In[ ]:
 
 
 #df_test[['cat_views_min', 'cat_views_max', 'cat_views_mean', 'cat_views_std',
@@ -1493,18 +1454,26 @@ df_test[daily_stats_cat_start.columns[2:]].isnull().sum()
 
 
 
-# In[71]:
+# In[ ]:
 
 
-def prep_category(inp_df):
+def prep_category(inp_df: pd.DataFrame) -> pd.DataFrame:
+    """Добавление признаков на основании признака категории
+    
+    args
+        inp_df - DataFrame в который необходимо добавить признаки
+        
+    return
+        DataFrame с добавленными признаками
+    """
     
     inp_df["category_int"] = inp_df.category.astype('category')
     inp_df["category_int"] = inp_df.category_int.cat.codes
     inp_df["category_int"] = inp_df.category_int.astype('int')
     
+    # добавляем признаки в список признаков
     if 'category_int' not in clmns['category']['num']:
         clmns['category']['num'].extend(['category_int'])
-    
     
     if 'category' not in clmns['category']['cat']:
         clmns['category']['cat'].extend(['category'])
@@ -1512,7 +1481,7 @@ def prep_category(inp_df):
     return inp_df
 
 
-# In[72]:
+# In[ ]:
 
 
 print('before ', df_train.shape, df_test.shape,)
@@ -1521,7 +1490,7 @@ df_test = prep_category(df_test)
 print('after  ', df_train.shape, df_test.shape, )
 
 
-# In[73]:
+# In[ ]:
 
 
 df_train.columns
@@ -1545,32 +1514,28 @@ df_train.columns
 
 
 
-# In[ ]:
-
-
-
-
-
-# In[ ]:
-
-
-
-
-
 # ## tags
 
-# In[74]:
+# In[ ]:
 
 
 #df_train['tags']  = df_train.tags.apply(lambda x: literal_eval(x))
 #df_test['tags']   = df_test.tags.apply( lambda x: literal_eval(x))
 
 
-# In[75]:
+# In[ ]:
 
 
-def add_tags_features(inp_df):
+def add_tags_features(inp_df: pd.DataFrame) -> pd.DataFrame:
+    """Добавление признаков на основании признака tag
     
+    args
+        inp_df - DataFrame в который необходимо добавить признаки
+        
+    return
+        DataFrame с добавленными признаками
+    """
+        
     inp_df["tags_int"] = inp_df.tags.astype('category')
     inp_df["tags_int"] = inp_df.tags_int.cat.codes
     inp_df["tags_int"] = inp_df.tags_int.astype('int')
@@ -1579,95 +1544,20 @@ def add_tags_features(inp_df):
     inp_df['tags'] = inp_df.tags.apply(lambda x: literal_eval(x))
     inp_df['ntags'] = inp_df.tags.apply(lambda x: len(x))
     
+    # добавляем признаки в список признаков
     if 'tags_int' not in clmns['tags']['num']:
         clmns['tags']['num'].extend(['ntags', 'tags_int'])
         
     return inp_df
 
 
-# In[76]:
+# In[ ]:
 
 
 print('before ', df_train.shape, df_test.shape, )
 df_train = add_tags_features(df_train)
 df_test = add_tags_features(df_test)
 print('after  ', df_train.shape, df_test.shape, )
-
-
-# In[ ]:
-
-
-
-
-all_tags = set()
-for el in df_train.tags.values:
-    if len (el) == 0:
-        continue
-    if len(el) == 1:
-        all_tags.add(el[0])
-        continue
-        
-    for tag in el:
-        all_tags.add(tag)
-        if not os.path.exists(os.path.join(DIR_DATA, 'df_tags.csv')):
-    tag_columns = ['tag', 'm_d', 'tag_size', 'v_tag_min', 'v_tag_max', 'v_tag_mean', 'v_tag_std', 'd_tag_min',
-                  'd_tag_max', 'd_tag_mean', 'd_tag_std', 'f_tag_min', 'f_tag_max', 'f_tag_mean', 'f_tag_std',
-                 ]
-
-    tag_group_columns = ['tag_size', 
-                            'v_tag_min', 'v_tag_max', 'v_tag_mean', 'v_tag_std',
-                            'tag_size2',
-                            'd_tag_min', 'd_tag_max', 'd_tag_mean', 'd_tag_std',
-                            'tag_size3',
-                            'f_tag_min', 'f_tag_max', 'f_tag_mean', 'f_tag_std',
-                       ]
-    
-    df_tags = pd.DataFrame(columns = tag_columns)
-    for el in tqdm(all_tags):
-        # собираем статистики текущего tag
-        df_train['cur_tag'] = df_train.tags.apply(lambda x: el if el in x else 0)
-
-        tmp = df_train.groupby(['cur_tag', 'm_d'])[['views', 'depth', 'full_reads_percent']].agg(['size', 'min', 'max', 'mean', 'std'])
-        tmp.columns = tag_group_columns
-        tmp.reset_index(inplace = True)
-        tmp.drop(['tag_size2', 'tag_size3'], axis = 1, inplace = True)
-
-        tmp = tmp[tmp.cur_tag != 0 ]
-        df_tags = pd.concat([df_tags, tmp], ignore_index = True, axis = 0)
-        df_tags['tag'] = df_tags.cur_tag
-        #df_tags.drop(['cur_tag'], inplace = True, axis = 1)
-        
-    df_tags.to_csv(os.path.join(DIR_DATA, 'df_tags.csv'), index = False) 
-else:
-    df_tags =  pd.read_csv(os.path.join(DIR_DATA, 'df_tags.csv'))
-# In[ ]:
-
-
-
-
-
-# In[ ]:
-
-
-
-
-
-# In[77]:
-
-
-#df_tags
-
-
-# In[ ]:
-
-
-
-
-
-# In[ ]:
-
-
-
 
 
 # In[ ]:
@@ -1690,22 +1580,30 @@ else:
 
 # # text_len
 
-# In[78]:
+# In[ ]:
 
 
-def add_text_len_features(inp_df):
+def add_text_len_features(inp_df: pd.DataFrame) -> pd.DataFrame:
+    """Добавление признаков на основании признака длинны текста
     
+    args
+        inp_df - DataFrame в который необходимо добавить признаки
+        
+    return
+        DataFrame с добавленными признаками
+    """
     
     inp_df["text_len_2"] = inp_df.text_len.apply(lambda x: 1 / (x+1)**2)
     inp_df["text_len_3"] = inp_df.text_len.apply(lambda x: np.sqrt(x))
     
+    # добавляем признаки в список признаков
     if 'text_len_2' not in clmns['document_id']['num']:
         clmns['document_id']['num'].extend(['text_len_2', 'text_len_3'])
     
     return inp_df
 
 
-# In[79]:
+# In[ ]:
 
 
 print('before ', df_train.shape, df_test.shape, )
@@ -1732,23 +1630,11 @@ print('after  ', df_train.shape, df_test.shape, )
 
 
 
-# In[ ]:
-
-
-
-
-
-# In[ ]:
-
-
-
-
-
 # ## Предобработка признаков в датасетах
 
 # выделяем числовые признаки для нормализации
 
-# In[80]:
+# In[ ]:
 
 
 cat_cols = []
@@ -1761,7 +1647,7 @@ for el in clmns.keys():
         print(clmns[el]['both'])
 
 
-# In[81]:
+# In[ ]:
 
 
 num_cols.extend(['hour', 'mounth', 'dow', ])
@@ -1783,87 +1669,15 @@ cat_cols.extend([ 'ph_report', 'ph_gallery', 'tv_prog', 'online', 'video', 'info
 
 
 
-# # Полипризнаки
-
-# In[82]:
-
-
-poly_cols = ['Nauthors', 'ctr', 'text_len', 'hour', 'day', 'mounth', 'dow', 'nimgs', 'category_int']
-len(poly_cols)
-
-
-# In[83]:
-
-
-#poly2 = preprocessing.PolynomialFeatures(degree = 2, include_bias = False)
-#oly2.fit(df_train[poly_cols])
-
-
-# In[84]:
-
-
-#poly3 = preprocessing.PolynomialFeatures(degree = 3, include_bias = False)
-#poly3.fit(df_train[poly_cols])
-
-
 # In[ ]:
 
 
 
 
 
-# In[85]:
-
-
-def addd_poly(inp_df, inp_poly):
-    
-    inp_cols = inp_df.columns
-    
-    tmp = inp_poly.transform(inp_df[poly_cols])
-    tmp = pd.DataFrame(tmp, columns = inp_poly.get_feature_names(poly_cols))
-    
-    inp_df = pd.concat([inp_df, 
-                        tmp.iloc[:, len(poly_cols):]
-                       ], ignore_index = True, axis = 1)
-    new_cols = list(inp_cols) + list(inp_poly.get_feature_names(poly_cols)[len(poly_cols):])
-    
-    inp_df.columns = new_cols
-         
-    if inp_poly.get_feature_names(poly_cols)[-1] not in clmns['poly']['num']:
-        clmns['poly']['num'].extend(inp_poly.get_feature_names(poly_cols)[len(poly_cols):])
-        
-        
-    return inp_df
-
-
-# In[86]:
-
-
-#print('before ', df_train.shape, df_test.shape)
-#df_train = addd_poly(df_train, poly2) #poly3
-#df_test  = addd_poly(df_test,  poly2) #poly3
-#print('after  ', df_train.shape, df_test.shape)
-
+# Сохраняем до нормализации для различного анализа
 
 # In[ ]:
-
-
-
-
-
-# In[87]:
-
-
-#num_cols.extend(clmns['poly']['num'])
-
-
-# In[ ]:
-
-
-
-
-
-# In[88]:
 
 
 df_train.to_csv(os.path.join( DIR_DATA, 'train_upd_no_norm.csv'), index = False)
@@ -1876,16 +1690,9 @@ df_test.to_csv(os.path.join( DIR_DATA,  'test_upd_no_norm.csv'), index = False)
 
 
 
-# нормализуем
-#scaler = preprocessing.MinMaxScaler()   #Transform features by scaling each feature to a given range.
-#scaler = preprocessing.Normalizer()     #Normalize samples individually to unit norm.
-scaler = preprocessing.StandardScaler()  #Standardize features by removing the mean and scaling to unit variance.
+# # Нормализуем
 
-scaler.fit(df_train[num_cols])
-
-df_train[num_cols] = scaler.transform(df_train[num_cols])
-df_test[num_cols]  = scaler.transform(df_test[num_cols])
-# In[89]:
+# In[ ]:
 
 
 scaler_start = preprocessing.StandardScaler()  #Standardize features by removing the mean and scaling to unit variance.
@@ -1907,12 +1714,10 @@ df_test.loc[df_test.query('distrib_brdr == 0').index, num_cols]  = scaler_end.tr
 
 
 
-# In[90]:
+# In[ ]:
 
 
-# определяем CTR_UKR спецстатей по украине после нормализации
-#for el in doc_id_ukr:
-#    print(df_test[df_test.document_id == el].ctr.values)
+
 
 
 # In[ ]:
@@ -1921,9 +1726,9 @@ df_test.loc[df_test.query('distrib_brdr == 0').index, num_cols]  = scaler_end.tr
 
 
 
-# Добавляем эмбединги
+# # Добавляем эмбеддинги
 
-# In[91]:
+# In[ ]:
 
 
 # sberbank-ai/sbert_large_mt_nlu_ru       1024  1.71Gb
@@ -1937,49 +1742,54 @@ MODEL_FOLDER = 'sbert_large_mt_nlu_ru'
 MAX_LENGTH = 24
 PCA_COMPONENTS = 64
 
-def add_ttle_embeding(inp_df: pd.DataFrame) -> pd.DataFrame:
-    
-    pass    
-    
-# In[92]:
 
+# In[ ]:
+
+
+def add_ttle_embeding(inp_df: pd.DataFrame, istest: bool) -> pd.DataFrame:
+    """Добавление признаков на основании эмбеддингов заголовков
+    
+    args
+        inp_df - DataFrame в который необходимо добавить признаки
+        istest - добавляются эмбеддинга для теста (True) или для трейна (False)
+        
+    return
+        DataFrame с добавленными признаками
+    """
+        
+    if istest:
+        emb = pd.read_csv(os.path.join(DIR_DATA, f'ttl_cln_emb_test_{MODEL_FOLDER}_{MAX_LENGTH}_pca{PCA_COMPONENTS}.csv'))
+    else:
+        emb = pd.read_csv(os.path.join(DIR_DATA, f'ttl_cln_emb_train_{MODEL_FOLDER}_{MAX_LENGTH}_pca{PCA_COMPONENTS}.csv'))
+     
+    emb.drop(['true_title'], axis = 1 , inplace = True)
+    
+    inp_df = inp_df.merge(emb, on = 'document_id', validate = 'one_to_one')
+   
+    # добавляем признаки в список признаков
+    if emb.columns[5] not in clmns['title']['num']:
+        clmns['title']['num'].extend(emb.columns[1:])
+
+    return inp_df
 
 emb_train = pd.read_csv(os.path.join(DIR_DATA, f'ttl_cln_emb_train_{MODEL_FOLDER}_{MAX_LENGTH}_pca{PCA_COMPONENTS}.csv'))
 #emb_train.drop(['document_id', 'title'], axis = 1 , inplace = True)
 emb_train.drop(['true_title'], axis = 1 , inplace = True)
 
 df_train = df_train.merge(emb_train, on = 'document_id', validate = 'one_to_one')
-df_train.shape, emb_train.shape
-
-
-# In[93]:
-
-
-emb_test = pd.read_csv(os.path.join(DIR_DATA, f'ttl_cln_emb_test_{MODEL_FOLDER}_{MAX_LENGTH}_pca{PCA_COMPONENTS}.csv'))
+df_train.shape, emb_train.shapeemb_test = pd.read_csv(os.path.join(DIR_DATA, f'ttl_cln_emb_test_{MODEL_FOLDER}_{MAX_LENGTH}_pca{PCA_COMPONENTS}.csv'))
 #emb_test.drop(['document_id', 'title'], axis = 1 , inplace = True)
 emb_test.drop(['true_title'], axis = 1 , inplace = True)
 
 df_test = df_test.merge(emb_test, on = 'document_id', validate = 'one_to_one')
 df_test.shape, emb_test.shape
+# In[ ]:
 
 
-# In[94]:
-
-
-num_cols = num_cols + list(emb_train.columns)
-
-
-# In[95]:
-
-
-if 'document_id' in num_cols:
-    num_cols.remove('document_id')
-
-
-# In[96]:
-
-
-clmns['title']['num'].extend(emb_train.columns[1:])
+print('before ', df_train.shape, df_test.shape)
+df_train = add_ttle_embeding(df_train, False)
+df_test  = add_ttle_embeding(df_test, True)
+print('after  ', df_train.shape, df_test.shape)
 
 
 # In[ ]:
@@ -1994,22 +1804,34 @@ clmns['title']['num'].extend(emb_train.columns[1:])
 
 
 
-# ## save
+# In[ ]:
 
-# In[97]:
+
+
+
+
+# In[ ]:
+
+
+
+
+
+# ## Сохраняем
+
+# In[ ]:
 
 
 df_test.shape, df_test.shape
 
 
-# In[98]:
+# In[ ]:
 
 
 df_train.to_csv(os.path.join( DIR_DATA, 'train_upd.csv'))
 df_test.to_csv(os.path.join( DIR_DATA,  'test_upd.csv'))
 
 
-# In[99]:
+# In[ ]:
 
 
 with open(os.path.join(DIR_DATA, 'clmns.pkl'), 'wb') as pickle_file:
@@ -2022,40 +1844,10 @@ with open(os.path.join(DIR_DATA, 'clmns.pkl'), 'wb') as pickle_file:
 
 
 
-# In[100]:
+# In[ ]:
 
 
 print("Notebook Runtime: %0.2f Minutes"%((time.time() - notebookstart)/60))
-
-
-# In[ ]:
-
-
-
-
-
-# In[101]:
-
-
-#clmns
-
-
-# In[102]:
-
-
-#cat_cols
-
-
-# In[103]:
-
-
-#print(num_cols)
-
-
-# In[ ]:
-
-
-
 
 
 # In[ ]:
