@@ -376,13 +376,13 @@ plot_feature_importance(model_views_start.get_feature_importance(), train_views_
 cb_params_views['iterations'] = 750
 
 
-# In[25]:
+# In[ ]:
 
 
 get_ipython().run_cell_magic('time', '', 'model_views_end = get_model(train_views_end, cb_params_views)')
 
 670         670      0.608364     0.065935       0.914413      0.008288     9189.254018     910.007358      4340.903897      127.150327
-# In[26]:
+# In[ ]:
 
 
 plot_feature_importance(model_views_end.get_feature_importance(), train_views_end.get_feature_names(), 'CATBOOST')

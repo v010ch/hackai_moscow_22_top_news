@@ -6,13 +6,14 @@
 
 import os
 import pickle as pkl
+from typing import List, Tuple, Optional
 
 import numpy as np
 import pandas as pd
 from sklearn.decomposition import PCA
 
 import re
-from tqdm import tqdm
+#from tqdm import tqdm
 from tqdm.auto import tqdm  # for notebooks
 tqdm.pandas()
 
@@ -45,7 +46,7 @@ DIR_DATA  = os.path.join(os.getcwd(), 'data')
 
 # ## Загружаем и подготавливаем данные
 
-# In[5]:
+# In[4]:
 
 
 #'_extended' после парсинга данных с РБК и извлечения данных из спарсенных страниц
@@ -53,7 +54,7 @@ df_train = pd.read_csv(os.path.join(DIR_DATA, 'train_extended.csv'))#, index_col
 df_test  = pd.read_csv(os.path.join(DIR_DATA, 'test_extended.csv'))#, index_col= 0)
 
 
-# In[6]:
+# In[5]:
 
 
 # sberbank-ai/sbert_large_mt_nlu_ru       1024  1.71Gb
@@ -69,34 +70,9 @@ df_test  = pd.read_csv(os.path.join(DIR_DATA, 'test_extended.csv'))#, index_col=
 
 
 
-# In[7]:
-
-
-# should try and without it
-#clean_text = lambda x:' '.join(re.sub('\n|\r|\t|[^а-я]', ' ', x.lower()).split())
-
-
-# In[8]:
-
-
-#x = clean_text(df_train.title[0])
-
-
-# In[9]:
-
-
-#x
-
-
-# In[10]:
-
-
-#dir(model)
-
-
 # ## Загружаем модель
 
-# In[11]:
+# In[6]:
 
 
 #PRE_TRAINED_MODEL_NAME = 'blanchefort/rubert-base-cased-sentiment-rurewiews'
@@ -115,41 +91,31 @@ MODEL_FOLDER = 'sbert_large_mt_nlu_ru'
 MAX_LENGTH = 24
 
 
-# In[12]:
+# In[7]:
 
 
 tokenizer = AutoTokenizer.from_pretrained(PRE_TRAINED_MODEL_NAME)
 model = AutoModel.from_pretrained(PRE_TRAINED_MODEL_NAME)
 
 
-# In[13]:
+# In[8]:
 
 
 #Mean Pooling - Take attention mask into account for correct averaging
 def mean_pooling(model_output, attention_mask):
+    
     token_embeddings = model_output[0] #First element of model_output contains all token embeddings
     input_mask_expanded = attention_mask.unsqueeze(-1).expand(token_embeddings.size()).float()
     sum_embeddings = torch.sum(token_embeddings * input_mask_expanded, 1)
     sum_mask = torch.clamp(input_mask_expanded.sum(1), min=1e-9)
+    
     return sum_embeddings / sum_mask
 
 
-# In[14]:
+# In[9]:
 
 
-def ttl_to_emb(inp_text):
-    
-    # Прямая трансляция, Фоторепортаж, Фотогалерея, Видео, телеканале РБК, Инфографика endswith
-    #if inp_text.endswith('Фоторепортаж') or \
-    #   inp_text.endswith('Фотогалерея') or \
-    #  inp_text.endswith('Видео') or \
-    #   inp_text.endswith('Инфографика'):
-    #   inp_text = ' '.join(inp_text.split()[:-1])
-        
-    #if inp_text.endswith('Прямая трансляция') or \
-    #   inp_text.endswith('телеканале РБК'):
-    #    inp_text = ' '.join(inp_text.split()[:-2])
-    
+def ttl_to_emb(inp_text: str) -> np.ndarray:
     
     encoded_input = tokenizer(inp_text, padding=True, truncation=True, max_length=MAX_LENGTH, return_tensors='pt')
 
@@ -170,52 +136,71 @@ def ttl_to_emb(inp_text):
 
 # ## Делаем эмбеддинга из заголовков. Трейн
 
-# In[15]:
+# In[10]:
 
 
-df_train = df_train[['document_id', 'true_title']]
+def get_ttl_emb(inp_df: pd.DataFrame, inp_PCA: PCA, inp_names: List[str], bTrainPCA: Optional[bool] = False) -> Tuple[pd.DataFrame, PCA]:
+    
+    inp_df = inp_df[['document_id', 'true_title']]
+    inp_df['ttl_emb'] = inp_df.true_title.progress_apply(lambda x: ttl_to_emb(x))
+    
+    if bTrainPCA:
+        print('fitting PCA')
+        inp_PCA.fit(inp_df.ttl_emb.to_list())
+    
+    emb_train = pd.DataFrame(inp_PCA.transform(inp_df.ttl_emb.to_list()), columns = inp_names)
+    
+    inp_df = pd.concat([inp_df, emb_train], axis=1)
+    inp_df.drop('ttl_emb', axis = 1, inplace = True)
+    
+    return (inp_df, inp_PCA)
 
 
-# In[16]:
-
-
-df_train['ttl_emb'] = df_train.true_title.progress_apply(lambda x: ttl_to_emb(x))
-
-col_names = [f'tt_emb{idx}' for idx in range(df_train.ttl_emb[0].shape[0])]
-emb_train = pd.DataFrame(df_train.ttl_emb.to_list(), columns = col_names)
-# In[17]:
+# In[11]:
 
 
 PCA_COMPONENTS = 64
+ttl_pca = PCA(n_components = PCA_COMPONENTS)
+col_names = [f'tt_emb{idx}' for idx in range(PCA_COMPONENTS)]
 
 
-# In[18]:
+# In[12]:
 
 
-get_ipython().run_cell_magic('time', '', "ttl_pca = PCA(n_components = PCA_COMPONENTS)\nttl_pca.fit(df_train.ttl_emb.to_list())\n\ncol_names = [f'tt_emb{idx}' for idx in range(PCA_COMPONENTS)]\nemb_train = pd.DataFrame(ttl_pca.transform(df_train.ttl_emb.to_list()), columns = col_names)")
+df_train, ttl_pca = get_ttl_emb(df_train, ttl_pca, col_names, True)
+df_test, _ = get_ttl_emb(df_test, ttl_pca, col_names)
+print(df_train.shape, df_test.shape)
 
 
-# In[19]:
+# In[ ]:
 
 
-df_train = pd.concat([df_train, emb_train], axis=1)
 
 
-# In[20]:
+df_train = df_train[['document_id', 'true_title']]df_train['ttl_emb'] = df_train.true_title.progress_apply(lambda x: ttl_to_emb(x))#col_names = [f'tt_emb{idx}' for idx in range(df_train.ttl_emb[0].shape[0])]
+#emb_train = pd.DataFrame(df_train.ttl_emb.to_list(), columns = col_names)%%time
+#ttl_pca = PCA(n_components = PCA_COMPONENTS)
+ttl_pca.fit(df_train.ttl_emb.to_list())
 
-
+#col_names = [f'tt_emb{idx}' for idx in range(PCA_COMPONENTS)]
+emb_train = pd.DataFrame(ttl_pca.transform(df_train.ttl_emb.to_list()), columns = col_names)df_train = pd.concat([df_train, emb_train], axis=1)
 df_train.drop('ttl_emb', axis = 1, inplace = True)
-
-
-# In[21]:
+df_train.shape
+# In[13]:
 
 
 df_train.head(3)
 
 
+# In[ ]:
+
+
+
+
+
 # Сохраняем только эмбеддинги, без остальных признаков
 
-# In[22]:
+# In[14]:
 
 
 df_train.to_csv(os.path.join(DIR_DATA, f'ttl_cln_emb_train_{MODEL_FOLDER}_{MAX_LENGTH}_pca{PCA_COMPONENTS}.csv'), index = False)
@@ -234,50 +219,28 @@ df_train.to_csv(os.path.join(DIR_DATA, f'ttl_cln_emb_train_{MODEL_FOLDER}_{MAX_L
 
 
 # ## Выполняем тоже с тестом
-
-# In[23]:
-
-
-df_test = df_test[['document_id', 'true_title']]
-
-
-# In[24]:
-
-
-df_test['ttl_emb'] = df_test.true_title.progress_apply(lambda x: ttl_to_emb(x))
-
-
+df_test = df_test[['document_id', 'true_title']]df_test['ttl_emb'] = df_test.true_title.progress_apply(lambda x: ttl_to_emb(x))
 # Сокращаем размерность
-
-# In[25]:
-
-
 #col_names = [f'tt_emb{idx}' for idx in range(df_test.ttl_emb[0].shape[0])]
 emb_test = pd.DataFrame(ttl_pca.transform(df_test.ttl_emb.to_list()), columns = col_names)
-#emb_test = pd.DataFrame(df_test.ttl_emb.to_list(), columns = col_names)
-
-
-# In[26]:
-
-
-df_test = pd.concat([df_test, emb_test], axis=1)
-
-
-# In[27]:
-
-
+#emb_test = pd.DataFrame(df_test.ttl_emb.to_list(), columns = col_names)df_test = pd.concat([df_test, emb_test], axis=1)
 df_test.drop('ttl_emb', axis = 1, inplace = True)
-
-
-# In[28]:
-
-
 df_test.shape
+# In[ ]:
+
+
+
+
+
+# In[ ]:
+
+
+
 
 
 # Сохраняем только эмбеддинги, без остальных признаков
 
-# In[29]:
+# In[15]:
 
 
 df_test.to_csv(os.path.join(DIR_DATA, f'ttl_cln_emb_test_{MODEL_FOLDER}_{MAX_LENGTH}_pca{PCA_COMPONENTS}.csv'), index = False)
